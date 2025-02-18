@@ -40,4 +40,16 @@ We welcome contributions to the CareConnect Backend project. To contribute, plea
 5. Push to the branch (`git push origin feature-branch`).
 6. Open a pull request.
 
-Please ensure your code adheres to our coding standards and includes appropriate tests.
+## Committing Changes
+
+We will be loosely following [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guideline for our commit messages. See the table below for the list of commit types.
+
+| Type     | Description                                                                           |
+| -------- | ------------------------------------------------------------------------------------- |
+| feat     | Commits that add a new feature                                                        |
+| fix      | Bug fixes                                                                             |
+| test     | Addings or changing tests, basically any change within the `test` directory           |
+| refactor | Changes to source code that neither add a feature nor fixes a bug                     |
+| build    | Changes to CI or build configuration files (Docker, github actions)                   |
+| chore    | Anything else that doesn't modify any `src` or `test` files (linters, tsconfig, etc.) |
+| revert   | Reverts a previous commit                                                             |
