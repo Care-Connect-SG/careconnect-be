@@ -6,9 +6,7 @@ Welcome to the CareConnect Backend repository. This project is the backend servi
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [API Documentation](#api-documentation)
 - [Contributing](#contributing)
-- [License](#license)
 
 ## Installation
 
