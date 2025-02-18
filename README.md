@@ -29,15 +29,9 @@ To start the development server make sure you have python, and run:
 uvicorn main:app --reload
 ```
 
-## Contributing
+## Workflow
 
-We welcome contributions to the CareConnect Backend project. To contribute, please follow these steps:
-
-1. Create a new branch (`git checkout -b feature-branch`).
-2. Make your changes.
-3. Commit your changes (`git commit -m 'Add some feature'`).
-4. Push to the branch (`git push origin feature-branch`).
-5. Open a pull request.
+See Jira for list of existing issues and to create branches for them.
 
 ## Committing Changes
 
@@ -52,3 +46,13 @@ We will be loosely following [conventional commits](https://www.conventionalcomm
 | build    | Changes to CI or build configuration files (Docker, github actions)                   |
 | chore    | Anything else that doesn't modify any `src` or `test` files (linters, tsconfig, etc.) |
 | revert   | Reverts a previous commit                                                             |
+
+## Contributing
+
+We welcome contributions to the CareConnect Backend project. To contribute, please follow these steps:
+
+1. Create a new branch (`git checkout -b feature-branch`).
+2. Make your changes.
+3. Commit your changes (`git commit -m 'Add some feature'`).
+4. Push to the branch (`git push origin feature-branch`).
+5. Open a pull request.
