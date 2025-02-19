@@ -14,6 +14,28 @@ To get started with the CareConnect Backend, follow these steps:
    ```bash
    cd careconnect-be
    ```
+3. Activate the virtual environment:
+
+   ```bash
+   source venv/bin/activate
+   ```
+
+   For windows:
+
+   ```bash
+   venv\Scripts\activate
+   ```
+
+   To deactivate:
+
+   ```bash
+   deactivate
+   ```
+
+4. Install all the requirements:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## Usage
 
