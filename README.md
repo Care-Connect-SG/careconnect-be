@@ -57,6 +57,10 @@ uvicorn main:app --reload
 
 See Jira for list of existing issues and to create branches for them.
 
+## Formatting and Code Style
+
+Whenever you are done coding, make sure to always fix linting errors before doing a pull request. You can either use an eslint extension for your IDE or run `black .` to fix linting errors. If you only wish to check whether your code has any linting errors, run pylint `$(git ls-files '*.py')` instead.
+
 ## Committing Changes
 
 We will be loosely following [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guideline for our commit messages. See the table below for the list of commit types.
