@@ -14,7 +14,7 @@ To get started with the CareConnect Backend, follow these steps:
    ```bash
    cd careconnect-be
    ```
-3. Create a `config.py` file in the root directory (same location as the `main.py` file) to include the environment variables needed for the server to work properly (ask Jay if need help).
+3. Create a `config.py` file in the root directory (same location as the `main.py` file) to include the environment variables needed for the server to work properly (ask jay if need help).
 
 4. Setup virtual environment:
 
