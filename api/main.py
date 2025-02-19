@@ -7,11 +7,11 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 
-from auth.hashing import Hash
-from auth.jwttoken import create_access_token
-from auth.oauth import get_current_user
+from api.auth.hashing import Hash
+from api.auth.jwttoken import create_access_token
+from api.auth.oauth import get_current_user
 from config import settings
-from models import User
+from models.user import User
 
 
 # Define a lifespan method for FastAPI
