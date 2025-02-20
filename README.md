@@ -16,10 +16,16 @@ To get started with the CareConnect Backend, follow these steps:
    ```
 3. Create a `config.py` file in the root directory (same location as the `main.py` file) to include the environment variables needed for the server to work properly (ask jay if need help).
 
-4. Setup virtual environment:
+4. Setup virtual environment, depending on your python:
 
    ```bash
    python -m venv .venv
+   ```
+
+   or
+
+   ```bash
+   python3 -m venv .env
    ```
 
 5. Activate the virtual environment:
@@ -50,7 +56,7 @@ To get started with the CareConnect Backend, follow these steps:
 To start the development server make sure you have python, and run:
 
 ```bash
-uvicorn main:app --reload
+uvicorn api.main:app --reload
 ```
 
 ## Workflow
