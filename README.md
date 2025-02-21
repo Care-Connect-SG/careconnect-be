@@ -14,7 +14,12 @@ To get started with the CareConnect Backend, follow these steps:
    ```bash
    cd careconnect-be
    ```
-3. Create a `.env` file in the root directory (same location as the `main.py` file) to include the environment variables needed for the server to work properly (ask jay if need help).
+3. Create a `.env` file in the root directory (same location as the `main.py` file) to include the environment variables needed for the server to work properly (ask jay for the variables).
+
+```shell
+MONGO_URI=
+FE_URL=
+```
 
 4. Setup virtual environment, depending on your python:
 
