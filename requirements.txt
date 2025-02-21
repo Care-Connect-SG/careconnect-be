@@ -1,6 +1,7 @@
 annotated-types==0.7.0
 anyio==4.5.2
 astroid==3.2.4
+bcrypt==4.2.1
 black==24.8.0
 cffi==1.17.1
 click==8.1.8

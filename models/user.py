@@ -3,20 +3,20 @@ from typing import Optional
 
 
 class User(BaseModel):
-    username: str
-    company: str
+    email: str
     password: str
 
 
 class Login(BaseModel):
-    username: str
+    email: str
     password: str
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+    email: str
 
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
+    email: Optional[str] = None
