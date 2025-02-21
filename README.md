@@ -56,7 +56,7 @@ To get started with the CareConnect Backend, follow these steps:
 To start the development server make sure you have python, and run:
 
 ```bash
-uvicorn api.main:app --reload
+uvicorn main:app --reload
 ```
 
 ## Workflow
