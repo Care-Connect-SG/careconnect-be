@@ -95,3 +95,9 @@ We welcome contributions to the CareConnect Backend project. To contribute, plea
 3. Commit your changes (`git commit -m 'Add some feature'`).
 4. Push to the branch (`git push origin feature-branch`).
 5. Open a pull request.
+
+If you have installed any new packages using pip, make sure to update the `requirements.txt` file by running:
+
+```bash
+pip freeze > requirements.txt
+```
