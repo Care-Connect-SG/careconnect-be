@@ -6,6 +6,7 @@ from db.connection import lifespan
 from config import FE_URL
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+import pkg_resources
 
 app = FastAPI(lifespan=lifespan)
 
@@ -30,3 +31,13 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.get("/")
 def read_root():
     return {"status": "Server is healthy"}
+
+@app.get("/versions")
+def get_versions():
+    fastapi_version = pkg_resources.get_distribution("fastapi").version
+    uvicorn_version = pkg_resources.get_distribution("uvicorn").version
+    # add other packages as needed
+    return {
+        "fastapi": fastapi_version,
+        "uvicorn": uvicorn_version,
+    }
