@@ -10,6 +10,5 @@
       "src": "/(.*)",
       "dest": "api/app.py"
     }
-  ],
-  "optionsAllowlist": ["/"]
+  ]
 }
