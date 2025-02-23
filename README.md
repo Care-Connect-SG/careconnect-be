@@ -6,10 +6,7 @@ Welcome to the CareConnect Backend repository. This project is the backend servi
 
 To get started with the CareConnect Backend, follow these steps:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/careconnect-be.git
-   ```
+1. Clone the repository
 2. Navigate to the project directory:
    ```bash
    cd careconnect-be
