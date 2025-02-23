@@ -74,6 +74,12 @@ Whenever you are done coding, make sure to always fix linting errors before doin
 
 ## Committing Changes
 
+If you have installed any new packages using pip, make sure to update the `requirements.txt` file by running:
+
+```bash
+pip freeze > requirements.txt
+```
+
 We will be loosely following [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guideline for our commit messages. See the table below for the list of commit types.
 
 | Type     | Description                                                                           |
@@ -95,9 +101,3 @@ We welcome contributions to the CareConnect Backend project. To contribute, plea
 3. Commit your changes (`git commit -m 'Add some feature'`).
 4. Push to the branch (`git push origin feature-branch`).
 5. Open a pull request.
-
-If you have installed any new packages using pip, make sure to update the `requirements.txt` file by running:
-
-```bash
-pip freeze > requirements.txt
-```
