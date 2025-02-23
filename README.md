@@ -58,7 +58,7 @@ FE_URL=
 To start the development server make sure you have python, and run:
 
 ```bash
-uvicorn main:app --reload
+uvicorn app.api:app --reload
 ```
 
 ## Workflow
