@@ -12,6 +12,7 @@ app = FastAPI(lifespan=lifespan)
 # CORS Middleware
 origins = [
     FE_URL,
+    "https://careconnect-fe.vercel.app",
 ]
 app.add_middleware(
     CORSMiddleware,
