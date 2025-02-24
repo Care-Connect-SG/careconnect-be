@@ -2,13 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.limiter import limiter
 from routers.user import router as user_router
-# from db.connection import lifespan
+from db.connection import lifespan
 from config import FE_URL
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 import pkg_resources
 
-# to be used when server is able to persist db connection (vercel is not able to do that)
+"""to be used when server is able to persist db connection (vercel is not able to do that because it is serverless)"""
 # app = FastAPI(lifespan=lifespan)
 
 app = FastAPI()

@@ -1,6 +1,5 @@
-# MongoDB Connection
 from fastapi import FastAPI, HTTPException, Request
-# from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient
 from config import MONGO_URI
 
@@ -22,7 +21,7 @@ async def get_db():
         client.close()
         print("🛑 Database disconnected.")
 
-# to be used in main.py when server is able to persist db connection
+"""to be used in main.py when server is able to persist db connection"""
 # @asynccontextmanager
 # async def lifespan(app: FastAPI):
 #     try:
