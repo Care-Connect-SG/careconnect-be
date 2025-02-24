@@ -9,9 +9,9 @@ from slowapi.errors import RateLimitExceeded
 import pkg_resources
 
 """to be used when server is able to persist db connection (vercel is not able to do that because it is serverless)"""
-# app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
-app = FastAPI()
+# app = FastAPI()
 
 # CORS Middleware
 app.add_middleware(
