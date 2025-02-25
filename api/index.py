@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.limiter import limiter
 from routers.user import router as user_router
+from routers.task import router as task_router
 from routers.resident import router as resident_router
 from db.connection import lifespan
 from config import FE_URL
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(user_router)
+app.include_router(task_router)
 app.include_router(resident_router)
 
 app.state.limiter = limiter
