@@ -16,5 +16,3 @@ class BaseConfig:
     """Pydantic configuration for MongoDB serialization."""
     population_by_name = True  # Allows using "_id" instead of "id"
     json_encoders = {ObjectId: str}  # Ensures ObjectId is serialized as a string
-    orm_mode = True  # Allows Pydantic to work with ORM models
-    use_enum_values = True  # Ensures Enum values are serialized as strings
