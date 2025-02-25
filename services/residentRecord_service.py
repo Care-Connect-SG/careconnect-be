@@ -45,3 +45,17 @@ async def get_all_residents(db) -> List[dict]:
         # (Optional) If your dates are stored as datetime, they will be serialized properly.
         residents.append(record)
     return residents
+
+from fastapi import HTTPException
+
+async def get_residents_by_name(db, name: str) -> List[dict]:
+    residents = []
+    # Using a regex to search for the substring in the full_name field, case-insensitive
+    cursor = db["resident_info"].find({"full_name": {"$regex": name, "$options": "i"}})
+    async for record in cursor:
+        # Convert Mongo _id to string for the response
+        record["id"] = str(record["_id"])
+        del record["_id"]
+        residents.append(record)
+    return residents
+
