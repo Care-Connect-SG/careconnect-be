@@ -27,8 +27,8 @@ class Recurrence(str, Enum):
     MONTHLY = "Monthly"
     ANNUALLY = "Annually"
 
-class Task(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+# Base model containing fields common to both input and output
+class TaskBase(BaseModel):
     task_title: str = Field(..., min_length=3, max_length=255)
     task_details: Optional[str] = None
     status: TaskStatus = TaskStatus.ASSIGNED
@@ -50,4 +50,13 @@ class Task(BaseModel):
     calendar_event_id: Optional[str] = None
 
     class Config(BaseConfig):
-        pass
+        # Use Pydantic V2 key for population by field name
+        populate_by_name = True
+
+# Input model for creating/updating tasks (excludes id)
+class TaskCreate(TaskBase):
+    pass
+
+# Output model for tasks (includes id with alias)
+class Task(TaskBase):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
