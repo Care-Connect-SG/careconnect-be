@@ -14,5 +14,5 @@ class PyObjectId(str):
 
 class BaseConfig:
     """Pydantic configuration for MongoDB serialization."""
-    population_by_name = True  # Allows using "_id" instead of "id"
-    json_encoders = {ObjectId: str}  # Ensures ObjectId is serialized as a string
+    populate_by_name = True
+    json_encoders = {ObjectId: str}
