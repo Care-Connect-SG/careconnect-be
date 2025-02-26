@@ -1,12 +1,12 @@
 from enum import Enum
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr
 from typing import Optional
-from db.base import PyObjectId, BaseConfig
+from db.base import BaseConfig
 
 class Role(str, Enum):
     ADMIN = "ADMIN"
     NURSE = "NURSE"
-    FAMILY = "FAMILY" 
+    FAMILY = "Family"
 
 class Gender(str, Enum):
     MALE = "MALE"
@@ -21,7 +21,7 @@ class User(BaseModel):
     role: Role
     organisation_rank: Optional[str] = None
     gender: Gender
-    
+
     class Config(BaseConfig):
         pass
 
