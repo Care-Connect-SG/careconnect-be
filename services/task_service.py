@@ -3,13 +3,25 @@ from models.task import Task, TaskStatus, TaskCreate
 from bson import ObjectId
 from fastapi import HTTPException
 from typing import Optional, List
+from datetime import datetime, date
+
+def convert_date_fields(data: dict) -> dict:
+    """
+    Convert any datetime.date objects in the dictionary to datetime.datetime objects.
+    """
+    for key, value in data.items():
+        if isinstance(value, date) and not isinstance(value, datetime):
+            data[key] = datetime.combine(value, datetime.min.time())
+    return data
 
 # Create Task
 async def create_task(db: AsyncIOMotorDatabase, task: TaskCreate):
     task_dict = task.dict(by_alias=True, exclude_none=True)
+    task_dict = convert_date_fields(task_dict)  # Convert date fields to datetime
     task_dict["_id"] = ObjectId()  # Generate a new MongoDB ObjectId
     await db.tasks.insert_one(task_dict)
     return {"message": "Task created successfully", "task_id": str(task_dict["_id"])}
+
 
 # Get All Tasks (With Filters)
 async def get_tasks(db: AsyncIOMotorDatabase, assigned_to=None, status=None, priority=None, category=None):

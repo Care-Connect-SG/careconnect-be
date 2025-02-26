@@ -50,7 +50,6 @@ class TaskBase(BaseModel):
     calendar_event_id: Optional[str] = None
 
     class Config(BaseConfig):
-        # Use Pydantic V2 key for population by field name
         populate_by_name = True
 
 # Input model for creating/updating tasks (excludes id)
