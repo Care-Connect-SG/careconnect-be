@@ -42,3 +42,21 @@ async def get_all_groups(db, role: str = Depends(check_permissions(["Admin"]))):
         group["_id"] = str(group["_id"])  # Convert ObjectId to string
         groups.append(group)
     return groups
+
+async def update_group(db, group_name: str, new_name: str, new_description: str, role: str = Depends(check_permissions(["Admin"]))):
+    
+    group = await db["groups"].find_one({"name": group_name})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    
+    updated_group = {
+        "name": new_name,
+        "description": new_description
+    }
+
+    # Update group in the database
+    await db["groups"].update_one({"name": group_name}, {"$set": updated_group})
+
+    return {"res": f"Group {group_name} updated successfully"}
+
