@@ -1,6 +1,7 @@
 annotated-types==0.7.0
 anyio==4.5.2
 astroid==3.2.4
+bcrypt==4.2.1
 black==24.8.0
 cffi==1.17.1
 click==8.1.8
@@ -10,6 +11,7 @@ Deprecated==1.2.18
 dill==0.3.9
 dnspython==2.6.1
 ecdsa==0.19.0
+email_validator==2.2.0
 exceptiongroup==1.2.2
 fastapi==0.115.8
 h11==0.14.0
