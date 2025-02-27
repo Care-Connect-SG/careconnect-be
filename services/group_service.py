@@ -1,7 +1,8 @@
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException, status
 from bson import ObjectId
+from services.user_service import check_permissions
 
-async def create_group(db, group_data):
+async def create_group(db, group_data, role: str = Depends(check_permissions(["Admin"]))):
     # Check if the group name already exists
     existing_group = await db["groups"].find_one({"name": group_data.name})
     if existing_group:
@@ -17,7 +18,7 @@ async def create_group(db, group_data):
     
     return {"res": "Group created successfully"}
 
-async def add_user_to_group(db, group_name: str, user_email: str):
+async def add_user_to_group(db, group_name: str, user_email: str, role: str = Depends(check_permissions(["Admin"]))):
     # Check if the group exists
     group = await db["groups"].find_one({"name": group_name})
     if not group:
@@ -34,11 +35,10 @@ async def add_user_to_group(db, group_name: str, user_email: str):
     return {"res": f"User {user_email} added to group {group_name}"}
 
 
-async def get_all_groups(db):
+async def get_all_groups(db, role: str = Depends(check_permissions(["Admin"]))):
     groups_cursor = db["groups"].find({})
     groups = []
     async for group in groups_cursor:
         group["_id"] = str(group["_id"])  # Convert ObjectId to string
         groups.append(group)
     return groups
-
