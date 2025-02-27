@@ -28,3 +28,4 @@ class RegistrationResponse(BaseModel):
     admission_date: date
     additional_notes: Optional[str] = None
     primary_nurse: Optional[str] = None
+    
