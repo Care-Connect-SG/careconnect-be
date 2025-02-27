@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, Query
 from models.resident import RegistrationCreate, RegistrationResponse
 from typing import List
-from services.residentRecord_service import create_residentInfo, get_all_residents, get_residents_by_name, get_resident_by_id, update_resident, delete_resident
+from services.resident_service import create_residentInfo, get_all_residents, get_residents_by_name, get_resident_by_id, update_resident, delete_resident
 from db.connection import get_db
 from .limiter import limiter
 
