@@ -1,19 +1,18 @@
 from enum import Enum
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
-from db.base import BaseConfig
+from db.base import PyObjectId, BaseConfig
 
 class Role(str, Enum):
-    ADMIN = "ADMIN"
-    NURSE = "NURSE"
+    ADMIN = "Admin"
+    NURSE = "Nurse"
     FAMILY = "Family"
 
 class Gender(str, Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
+    MALE = "Male"
+    FEMALE = "Female"
 
-class User(BaseModel):
-    id: str
+class UserBase(BaseModel):
     email: EmailStr
     name: str
     password: str
@@ -23,7 +22,10 @@ class User(BaseModel):
     gender: Gender
 
     class Config(BaseConfig):
-        pass
+        populate_by_name = True
+
+class User(UserBase):
+     id: Optional[PyObjectId] = Field(alias="_id", default=None)
 
 class Token(BaseModel):
     access_token: str

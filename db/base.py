@@ -7,10 +7,14 @@ class PyObjectId(str):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v):
+    def validate(cls, v, info):
         if not ObjectId.is_valid(v):
             raise ValueError("Invalid ObjectId")
         return str(v)
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, schema, handler):
+        return {"type": "string"}
 
 class BaseConfig:
     """Pydantic configuration for MongoDB serialization."""

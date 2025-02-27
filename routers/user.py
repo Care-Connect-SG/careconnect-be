@@ -1,19 +1,27 @@
 from fastapi import Depends, APIRouter, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from db.connection import get_db
-from models.user import User, Token
-from services.user_service import check_permissions, register_user, login_user, get_user_by_id, get_all_users, update_user, delete_user
+from models.user import User, UserBase, Token
+from services.user_service import (
+    register_user,
+    login_user,
+    get_user_by_id,
+    get_all_users,
+    update_user,
+    delete_user
+)
 from .limiter import limiter
 
+router = APIRouter(prefix="/users", tags=["Users"])
 
-router = APIRouter(prefix="/users")
-
-# Create User (Register)
+# Create User (Register) using UserBase as input
 @router.post("/register", response_model=User)
 @limiter.limit("10/second")
-async def create_user(request: Request, user: User, db=Depends(get_db)):
+async def create_user(request: Request, user_data: UserBase, db=Depends(get_db)):
     try:
-        return await register_user(db, user)
+        # register_user is updated to expect a UserBase instance
+        user = await register_user(db, user_data)
+        return user
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error registering user: {str(e)}")
 
@@ -22,7 +30,8 @@ async def create_user(request: Request, user: User, db=Depends(get_db)):
 @limiter.limit("10/second")
 async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
     try:
-        return await login_user(db, form_data.username, form_data.password)
+        token = await login_user(db, form_data.username, form_data.password)
+        return token
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -48,12 +57,18 @@ async def get_user(request: Request, user_id: str, db=Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
 
-# Update User Details
+# Update User Details using UserBase for input
 @router.put("/{user_id}", response_model=User)
 @limiter.limit("5/second")
-async def update_user_details(request: Request, user_id: str, user: User, db=Depends(get_db)):
+async def update_user_details(
+    request: Request,
+    user_id: str,
+    user_data: UserBase,
+    db=Depends(get_db)
+):
     try:
-        updated_user = await update_user(db, user_id, user)
+        # Convert the incoming UserBase to a dict (only include provided fields)
+        updated_user = await update_user(db, user_id, user_data.model_dump(exclude_unset=True))
         if not updated_user:
             raise HTTPException(status_code=404, detail="User not found")
         return updated_user
@@ -65,9 +80,8 @@ async def update_user_details(request: Request, user_id: str, user: User, db=Dep
 @limiter.limit("5/second")
 async def delete_user_by_id(request: Request, user_id: str, db=Depends(get_db)):
     try:
-        success = await delete_user(db, user_id)
-        if not success:
+        result = await delete_user(db, user_id)
+        if not result:
             raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
-
