@@ -10,6 +10,7 @@ router = APIRouter(prefix="/residents", tags=["Resident Records"])
 @router.post("/createNewRecord")
 @limiter.limit("1/second")
 async def create_resident_record(request: Request, registration: RegistrationCreate, db=Depends(get_db)):
+    
     return await create_residentInfo(db, registration)
 
 @router.get("/", response_model=List[RegistrationResponse])
