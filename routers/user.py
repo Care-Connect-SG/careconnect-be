@@ -11,6 +11,7 @@ from services.user_service import (
     delete_user
 )
 from .limiter import limiter
+from typing import List
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -36,7 +37,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
 # Get all users
-@router.get("/", response_model=list[User])
+@router.get("/", response_model=List[User])
 @limiter.limit("5/second")
 async def get_users(request: Request, db=Depends(get_db)):
     try:
