@@ -60,3 +60,14 @@ async def update_group(db, group_name: str, new_name: str, new_description: str,
 
     return {"res": f"Group {group_name} updated successfully"}
 
+async def delete_group(db, group_name: str, role: str = Depends(check_permissions(["Admin"]))):
+    # Check if the group exists
+    group = await db["groups"].find_one({"name": group_name})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Delete the group from the database
+    await db["groups"].delete_one({"name": group_name})
+
+    return {"res": f"Group {group_name} deleted successfully"}
+
