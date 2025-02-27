@@ -7,5 +7,6 @@ class Group(BaseModel):
     members: Optional[List[str]] = []  # Default to an empty list
 
 class GroupCreate(BaseModel):
+    group_id: Optional[str]  # Group id is optional
     name: str
     description: str

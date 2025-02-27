@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from db.connection import get_db
 from models.group import GroupCreate
-from services.group_service import create_group, add_user_to_group, get_all_groups, update_group, delete_group
+from services.group_service import create_group, add_user_to_group, get_all_groups, update_group, delete_group, remove_user_from_group
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
@@ -32,3 +32,11 @@ async def delete_group_route(
     db=Depends(get_db)
 ):
     return await delete_group(db, group_name)
+
+@router.delete("/remove-user")
+async def remove_user_route(
+    group_name: str, 
+    user_email: str, 
+    db=Depends(get_db)
+):
+    return await remove_user_from_group(db, group_name, user_email)

@@ -3,20 +3,27 @@ from bson import ObjectId
 from services.user_service import check_permissions
 
 async def create_group(db, group_data, role: str = Depends(check_permissions(["Admin"]))):
+    # If group_id is not provided, generate it using ObjectId
+    group_id = group_data.group_id if group_data.group_id else str(ObjectId())
+
     # Check if the group name already exists
     existing_group = await db["groups"].find_one({"name": group_data.name})
     if existing_group:
         raise HTTPException(status_code=400, detail="Group name already exists")
 
-    # Convert Pydantic model to dictionary and insert into DB
+    # Create the group object with the new group_id
     group_object = {
+        "_id": ObjectId(group_id),  # Use ObjectId for MongoDB
+        "group_id": group_id,
         "name": group_data.name,
         "description": group_data.description,  # Store description
         "members": []  # Initialize an empty members list
     }
+
+    # Insert the group into the database
     await db["groups"].insert_one(group_object)
-    
-    return {"res": "Group created successfully"}
+
+    return {"res": "Group created successfully", "group_id": group_id}
 
 async def add_user_to_group(db, group_name: str, user_email: str, role: str = Depends(check_permissions(["Admin"]))):
     # Check if the group exists
@@ -71,3 +78,21 @@ async def delete_group(db, group_name: str, role: str = Depends(check_permission
 
     return {"res": f"Group {group_name} deleted successfully"}
 
+async def remove_user_from_group(
+    db, group_name: str, user_email: str, role: str = Depends(check_permissions(["Admin"]))
+):
+    # Check if the group exists
+    group = await db["groups"].find_one({"name": group_name})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Check if the user is part of the group
+    if user_email not in group["members"]:
+        raise HTTPException(status_code=404, detail="User not found in group")
+
+    # Remove the user from the group
+    await db["groups"].update_one(
+        {"name": group_name}, {"$pull": {"members": user_email}}
+    )
+
+    return {"res": f"User {user_email} removed from group {group_name}"}
