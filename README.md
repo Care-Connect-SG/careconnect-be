@@ -16,6 +16,7 @@ To get started with the CareConnect Backend, follow these steps:
 ```shell
 MONGO_URI=
 FE_URL=
+SECRET_KEY=
 ```
 
 4. Setup virtual environment, depending on your python:
@@ -27,7 +28,7 @@ FE_URL=
    or
 
    ```bash
-   python3 -m venv .env
+   python3 -m venv .venv
    ```
 
 5. Activate the virtual environment:
