@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import date
 from typing import Optional
-from db.base import PyObjectId
+
 
 class MedicationCreate(BaseModel):
     medication_name: str
@@ -11,8 +11,9 @@ class MedicationCreate(BaseModel):
     end_date: Optional[date] = None
     instructions: Optional[str] = None
 
+
 class MedicationResponse(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: str
     resident_id: str
     medication_name: str
     dosage: str
@@ -20,4 +21,3 @@ class MedicationResponse(BaseModel):
     start_date: date
     end_date: Optional[date] = None
     instructions: Optional[str] = None
-
