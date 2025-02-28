@@ -14,7 +14,6 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
     # Create the group object with the new group_id
     group_object = {
         "_id": ObjectId(group_id),  # Use ObjectId for MongoDB
-        "group_id": group_id,
         "name": group_data.name,
         "description": group_data.description,  # Store description
         "members": []  # Initialize an empty members list
@@ -96,3 +95,32 @@ async def remove_user_from_group(
     )
 
     return {"res": f"User {user_email} removed from group {group_name}"}
+
+async def search_group(db, group_id: str = None, name: str = None, role: str = Depends(check_permissions(["Admin"]))):
+    query = {}
+    if group_id:
+        query["group_id"] = group_id
+    elif name:
+        query["name"] = name
+    else:
+        raise HTTPException(status_code=400, detail="Please provide either group_id or name")
+
+    group = await db["groups"].find_one(query)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    group["_id"] = str(group["_id"])  # Convert ObjectId to string for serialization
+    return group
+
+async def get_user_groups(db, user_email: str, role: str = Depends(check_permissions(["Admin"]))):
+    # Check if the user exists
+    user = await db["users"].find_one({"email": user_email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Find all groups where the user is a member
+    groups_cursor = db["groups"].find({"members": user_email})
+    group_names = [group["name"] async for group in groups_cursor]
+
+    # Return the list of group names
+    return {"user_email": user_email, "groups": group_names}
