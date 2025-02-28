@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import date
 from typing import Optional
-from db.base import PyObjectId
+
 
 class RegistrationCreate(BaseModel):
     full_name: str
@@ -17,7 +17,7 @@ class RegistrationCreate(BaseModel):
 
 
 class RegistrationResponse(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    id: str
     full_name: str
     gender: str
     date_of_birth: date
@@ -29,4 +29,3 @@ class RegistrationResponse(BaseModel):
     admission_date: date
     additional_notes: Optional[str] = None
     primary_nurse: Optional[str] = None
-

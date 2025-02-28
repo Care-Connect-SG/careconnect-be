@@ -2,7 +2,10 @@ from fastapi import Depends, HTTPException, status
 from bson import ObjectId
 from services.user_service import check_permissions
 
-async def create_group(db, group_data, role: str = Depends(check_permissions(["Admin"]))):
+
+async def create_group(
+    db, group_data, role: str = Depends(check_permissions(["Admin"]))
+):
     # If group_id is not provided, generate it using ObjectId
     group_id = group_data.group_id if group_data.group_id else str(ObjectId())
 
@@ -16,7 +19,7 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
         "_id": ObjectId(group_id),  # Use ObjectId for MongoDB
         "name": group_data.name,
         "description": group_data.description,  # Store description
-        "members": []  # Initialize an empty members list
+        "members": [],  # Initialize an empty members list
     }
 
     # Insert the group into the database
@@ -24,7 +27,13 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
 
     return {"res": "Group created successfully", "group_id": group_id}
 
-async def add_user_to_group(db, group_name: str, user_email: str, role: str = Depends(check_permissions(["Admin"]))):
+
+async def add_user_to_group(
+    db,
+    group_name: str,
+    user_email: str,
+    role: str = Depends(check_permissions(["Admin"])),
+):
     # Check if the group exists
     group = await db["groups"].find_one({"name": group_name})
     if not group:
@@ -49,24 +58,30 @@ async def get_all_groups(db, role: str = Depends(check_permissions(["Admin"]))):
         groups.append(group)
     return groups
 
-async def update_group(db, group_name: str, new_name: str, new_description: str, role: str = Depends(check_permissions(["Admin"]))):
-    
+
+async def update_group(
+    db,
+    group_name: str,
+    new_name: str,
+    new_description: str,
+    role: str = Depends(check_permissions(["Admin"])),
+):
+
     group = await db["groups"].find_one({"name": group_name})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    
-    updated_group = {
-        "name": new_name,
-        "description": new_description
-    }
+    updated_group = {"name": new_name, "description": new_description}
 
     # Update group in the database
     await db["groups"].update_one({"name": group_name}, {"$set": updated_group})
 
     return {"res": f"Group {group_name} updated successfully"}
 
-async def delete_group(db, group_name: str, role: str = Depends(check_permissions(["Admin"]))):
+
+async def delete_group(
+    db, group_name: str, role: str = Depends(check_permissions(["Admin"]))
+):
     # Check if the group exists
     group = await db["groups"].find_one({"name": group_name})
     if not group:
@@ -77,8 +92,12 @@ async def delete_group(db, group_name: str, role: str = Depends(check_permission
 
     return {"res": f"Group {group_name} deleted successfully"}
 
+
 async def remove_user_from_group(
-    db, group_name: str, user_email: str, role: str = Depends(check_permissions(["Admin"]))
+    db,
+    group_name: str,
+    user_email: str,
+    role: str = Depends(check_permissions(["Admin"])),
 ):
     # Check if the group exists
     group = await db["groups"].find_one({"name": group_name})
@@ -96,14 +115,22 @@ async def remove_user_from_group(
 
     return {"res": f"User {user_email} removed from group {group_name}"}
 
-async def search_group(db, group_id: str = None, name: str = None, role: str = Depends(check_permissions(["Admin"]))):
+
+async def search_group(
+    db,
+    group_id: str = None,
+    name: str = None,
+    role: str = Depends(check_permissions(["Admin"])),
+):
     query = {}
     if group_id:
         query["group_id"] = group_id
     elif name:
         query["name"] = name
     else:
-        raise HTTPException(status_code=400, detail="Please provide either group_id or name")
+        raise HTTPException(
+            status_code=400, detail="Please provide either group_id or name"
+        )
 
     group = await db["groups"].find_one(query)
     if not group:
@@ -112,7 +139,10 @@ async def search_group(db, group_id: str = None, name: str = None, role: str = D
     group["_id"] = str(group["_id"])  # Convert ObjectId to string for serialization
     return group
 
-async def get_user_groups(db, user_email: str, role: str = Depends(check_permissions(["Admin"]))):
+
+async def get_user_groups(
+    db, user_email: str, role: str = Depends(check_permissions(["Admin"]))
+):
     # Check if the user exists
     user = await db["users"].find_one({"email": user_email})
     if not user:

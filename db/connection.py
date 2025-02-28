@@ -5,7 +5,6 @@ from config import MONGO_URI
 
 # db = None
 
-# Dependency for getting DB
 # async def get_db():
 #     try:
 #         client = AsyncIOMotorClient(MONGO_URI, serverSelectionTimeoutMS=5000)
@@ -21,14 +20,17 @@ from config import MONGO_URI
 #         client.close()
 #         print("🛑 Database disconnected.")
 
+
 async def get_db(request: Request):
     return request.app.mongodb
 
-"""to be used in main.py when server is able to persist db connection"""
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        app.mongodb_client = AsyncIOMotorClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        app.mongodb_client = AsyncIOMotorClient(
+            MONGO_URI, serverSelectionTimeoutMS=5000
+        )
         app.mongodb = app.mongodb_client.get_database("caregiver")
         await app.mongodb.command("ping")
         print("✅ Connected to MongoDB Atlas")
