@@ -1,5 +1,6 @@
+from datetime import datetime, timezone
 from enum import Enum
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, HttpUrl
 from typing import Optional
 from db.base import PyObjectId, BaseConfig
 
@@ -20,6 +21,8 @@ class UserBase(BaseModel):
     role: Role
     organisation_rank: Optional[str] = None
     gender: Gender
+    profile_picture: Optional[HttpUrl] = None  
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # Timezone-aware datetime
 
     class Config(BaseConfig):
         populate_by_name = True
