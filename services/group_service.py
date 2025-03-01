@@ -3,10 +3,8 @@ from bson import ObjectId
 from services.user_service import check_permissions
 
 
-async def create_group(
-    db, group_data, role: str = Depends(check_permissions(["Admin"]))
-):
-    # If group_id is not provided, generate it using ObjectId
+async def create_group(db, group_data, role: str = Depends(check_permissions(["Admin"]))):
+    # Generate a group_id if one isn't provided
     group_id = group_data.group_id if group_data.group_id else str(ObjectId())
 
     # Check if the group name already exists
@@ -14,18 +12,23 @@ async def create_group(
     if existing_group:
         raise HTTPException(status_code=400, detail="Group name already exists")
 
-    # Create the group object with the new group_id
+    # Create the group object with the new group_id and other details
     group_object = {
-        "_id": ObjectId(group_id),  # Use ObjectId for MongoDB
+        "_id": ObjectId(group_id),  # MongoDB ObjectId
         "name": group_data.name,
-        "description": group_data.description,  # Store description
-        "members": [],  # Initialize an empty members list
+        "description": group_data.description,
+        "members": []  # Initialize an empty members list
     }
 
     # Insert the group into the database
     await db["groups"].insert_one(group_object)
 
-    return {"res": "Group created successfully", "group_id": group_id}
+    # Convert MongoDB _id to a string and assign it to 'id'
+    group_object["id"] = str(group_object["_id"])
+    del group_object["_id"]
+
+    return group_object
+
 
 
 async def add_user_to_group(
@@ -61,22 +64,26 @@ async def get_all_groups(db, role: str = Depends(check_permissions(["Admin"]))):
 
 async def update_group(
     db,
-    group_name: str,
+    group_id: str,  # Now use group_id instead of group_name
     new_name: str,
     new_description: str,
     role: str = Depends(check_permissions(["Admin"])),
 ):
+    try:
+        oid = ObjectId(group_id)
+    except errors.InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid group id")
 
-    group = await db["groups"].find_one({"name": group_name})
+    group = await db["groups"].find_one({"_id": oid})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
     updated_group = {"name": new_name, "description": new_description}
 
-    # Update group in the database
-    await db["groups"].update_one({"name": group_name}, {"$set": updated_group})
+    # Update the group in the database by its ObjectId
+    await db["groups"].update_one({"_id": oid}, {"$set": updated_group})
 
-    return {"res": f"Group {group_name} updated successfully"}
+    return {"res": f"Group {group_id} updated successfully"}
 
 
 async def delete_group(

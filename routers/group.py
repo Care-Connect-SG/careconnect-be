@@ -22,12 +22,12 @@ async def list_groups(db=Depends(get_db)):
 
 @router.put("/edit")
 async def edit_group(
-    group_name: str, 
+    group_id: str, 
     new_name: str, 
     new_description: str, 
     db=Depends(get_db)
 ):
-    return await update_group(db, group_name, new_name, new_description)
+    return await update_group(db, group_id, new_name, new_description)
 
 @router.delete("/delete")
 async def delete_group_route(
