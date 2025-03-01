@@ -17,7 +17,6 @@ def convert_id(document):
 
 async def create_form(form: FormBase, db):
     form_data = form.model_dump()
-    form_data["status"] = "Draft"
     form_data["created_date"] = datetime.now()
     result = await db["forms"].insert_one(form_data)
     return str(result.inserted_id)
@@ -37,7 +36,8 @@ async def get_form_by_id(form_id: str, db):
     form_data = await db["forms"].find_one({"_id": object_id})  
     if not form_data:
         raise HTTPException(status_code=404, detail="Form not found")  
-    return form_id
+    form_data["_id"] = str(form_data["_id"])
+    return form_data
 
 
 async def update_form_fields(form_id: str, form: FormBase, db):
@@ -58,7 +58,7 @@ async def update_form_fields(form_id: str, form: FormBase, db):
     return form_id
 
 
-async def update_form_status(form_id: str, form: FormBase, db):
+async def update_form_status(form_id: str, db):
     try:
         object_id = ObjectId(form_id)
     except Exception:
@@ -68,8 +68,7 @@ async def update_form_status(form_id: str, form: FormBase, db):
     if not form_data:
         raise HTTPException(status_code=404, detail="Form not found")
 
-    update_data = form.model_dump(exclude_unset=True)
-    await db["forms"].update_one({"_id": object_id}, {"$set": {**update_data, "status": "Published"}})
+    await db["forms"].update_one({"_id": object_id}, {"$set": {"status": "Published"}})
     return form_id
 
 
