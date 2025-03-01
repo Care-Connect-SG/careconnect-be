@@ -11,34 +11,21 @@ To get started with the CareConnect Backend, follow these steps:
    ```bash
    cd careconnect-be
    ```
-3. Create a `.env` file in the root directory (same location as the `main.py` file) to include the environment variables needed for the server to work properly (ask jay for the variables).
-
-```shell
-MONGO_URI=
-FE_URL=
-```
+3. Create a `.env` file in the root directory (same location as the `main.py` file) to include the environment variables needed for the server to work properly (see `.env.example`).
 
 4. Setup virtual environment, depending on your python:
 
    ```bash
    python -m venv .venv
-   ```
-
-   or
-
-   ```bash
-   python3 -m venv .env
+   # or
+   python3 -m venv .venv
    ```
 
 5. Activate the virtual environment:
 
    ```bash
    source .venv/bin/activate
-   ```
-
-   For windows:
-
-   ```bash
+   # For windows:
    .venv\Scripts\activate
    ```
 
@@ -51,6 +38,8 @@ FE_URL=
 6. Install all the requirements:
    ```bash
    pip install -r requirements.txt
+   # or
+   pip3 install -r requirements.txt
    ```
 
 ## Usage
@@ -75,6 +64,8 @@ If you have installed any new packages using pip, make sure to update the `requi
 
 ```bash
 pip freeze > requirements.txt
+# or
+pip3 freeze > requirements.txt
 ```
 
 We will be loosely following [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) guideline for our commit messages. See the table below for the list of commit types.

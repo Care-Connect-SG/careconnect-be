@@ -1,19 +1,21 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from routers.limiter import limiter
 from routers.user import router as user_router
+from routers.group import router as group_router
 from routers.task import router as task_router
 from routers.resident import router as resident_router
+from routers.medication import router as medication_router
 from db.connection import lifespan
 from config import FE_URL
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-import pkg_resources
+from bearer import verify_bearer_token
 
-"""to be used when server is able to persist db connection (vercel is not able to do that because it is serverless)"""
-app = FastAPI(lifespan=lifespan)
-
-# app = FastAPI()
+app = FastAPI(
+    root_path="/api/v1", lifespan=lifespan, dependencies=[Depends(verify_bearer_token)]
+)
+# app = FastAPI(root_path="/api/v1")
 
 # CORS Middleware
 app.add_middleware(
@@ -25,22 +27,15 @@ app.add_middleware(
 )
 
 app.include_router(user_router)
+app.include_router(group_router)
 app.include_router(task_router)
 app.include_router(resident_router)
+app.include_router(medication_router)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
 @app.get("/")
 def read_root():
     return {"status": "Server is healthy"}
-
-@app.get("/versions")
-def get_versions():
-    fastapi_version = pkg_resources.get_distribution("fastapi").version
-    uvicorn_version = pkg_resources.get_distribution("uvicorn").version
-    # add other packages as needed
-    return {
-        "fastapi": fastapi_version,
-        "uvicorn": uvicorn_version,
-    }
