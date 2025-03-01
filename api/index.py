@@ -14,7 +14,7 @@ from slowapi.errors import RateLimitExceeded
 from bearer import verify_bearer_token
 
 app = FastAPI(
-    root_path="/api/v1", lifespan=lifespan, dependencies=[Depends(verify_bearer_token)]
+    root_path="/api/v1", lifespan=lifespan
 )
 # app = FastAPI(root_path="/api/v1")
 
