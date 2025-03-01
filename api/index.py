@@ -2,13 +2,10 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from routers.limiter import limiter
 from routers.user import router as user_router
-<<<<<<< HEAD
 from routers.group import router as group_router
 from routers.task import router as task_router
 from routers.resident import router as resident_router
 from routers.medication import router as medication_router
-=======
->>>>>>> 4f2db84 (feat: implement endpoints for form builder)
 from routers.incident.form import router as form_router
 from db.connection import lifespan
 from config import FE_URL
