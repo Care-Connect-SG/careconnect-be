@@ -14,6 +14,7 @@ class RegistrationCreate(BaseModel):
     relationship: str
     room_number: Optional[str] = None
     additional_notes: Optional[str] = None
+    additional_notes_timestamp: Optional[str] = None
     primary_nurse: Optional[str] = None
 
 
@@ -29,4 +30,5 @@ class RegistrationResponse(BaseModel):
     room_number: str
     admission_date: date
     additional_notes: Optional[str] = None
+    additional_notes_timestamp: Optional[str] = None
     primary_nurse: Optional[str] = None
