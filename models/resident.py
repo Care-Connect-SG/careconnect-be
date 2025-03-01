@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional
-
+from enum import Enum
+from models.base import ModelConfig, PyObjectId
 
 class RegistrationCreate(BaseModel):
     full_name: str
@@ -17,7 +18,7 @@ class RegistrationCreate(BaseModel):
 
 
 class RegistrationResponse(BaseModel):
-    id: str
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     full_name: str
     gender: str
     date_of_birth: date
