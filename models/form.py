@@ -1,14 +1,21 @@
 from pydantic import BaseModel
-from typing import Optional, Dict
-from datetime import datetime
+from typing import List
+
+class FormElement(BaseModel):
+    id: str
+    type: str
+    label: str
+    helptext: str
+    required: bool
+    options: List[str] = []
 
 class FormBase(BaseModel):
     title: str
-    description: Optional[str] = ""
+    description: str
     creator_id: str
-    json_content: Dict
+    json_content: List[FormElement]
+    status: str
 
 class FormComplete(FormBase):
     _id: str
-    created_date: datetime
-    status: str
+    created_date: str
