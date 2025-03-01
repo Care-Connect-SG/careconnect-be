@@ -1,8 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional
-from enum import Enum
-from models.base import ModelConfig, PyObjectId
+from models.base import PyObjectId  # or your own ObjectId field if needed
 
 class RegistrationCreate(BaseModel):
     full_name: str
@@ -16,7 +15,6 @@ class RegistrationCreate(BaseModel):
     additional_notes: Optional[str] = None
     additional_notes_timestamp: Optional[date] = None
     primary_nurse: Optional[str] = None
-
 
 class RegistrationResponse(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)

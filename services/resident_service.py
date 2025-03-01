@@ -5,9 +5,8 @@ from models.resident import RegistrationCreate
 from bson import ObjectId
 from typing import List
 
-
 async def create_residentInfo(db, registration_data: RegistrationCreate):
-    # Optionally check if a registration already exists for the given NRIC
+    # Check if NRIC already exists
     existing = await db["resident_info"].find_one(
         {"nric_number": registration_data.nric_number}
     )
@@ -19,30 +18,38 @@ async def create_residentInfo(db, registration_data: RegistrationCreate):
     # Auto-assign a room number if not provided
     room_number = registration_data.room_number or str(random.randint(100, 999))
 
-    # Prepare the registration object
     registration_dict = registration_data.dict()
-    registration_dict["room_number"] = room_number
 
-    # Convert date_of_birth from date to datetime (if needed)
+    # If `_id` is null or missing, remove it so Mongo can auto-generate an _id
+    registration_dict.pop("_id", None)
+
+    # Convert date fields from `date` to `datetime` if needed
     if isinstance(registration_dict.get("date_of_birth"), datetime.date):
         registration_dict["date_of_birth"] = datetime.datetime.combine(
             registration_dict["date_of_birth"], datetime.time.min
         )
 
-    # Set admission_date automatically to current datetime (midnight)
+    # additional_notes_timestamp if it exists
+    if isinstance(registration_dict.get("additional_notes_timestamp"), datetime.date):
+        registration_dict["additional_notes_timestamp"] = datetime.datetime.combine(
+            registration_dict["additional_notes_timestamp"], datetime.time.min
+        )
+
+    # Set admission_date automatically to current date (midnight)
     today_date = datetime.date.today()
     registration_dict["admission_date"] = datetime.datetime.combine(
         today_date, datetime.time.min
     )
 
-    # Insert into the resident_info collection
-    result = await db["resident_info"].insert_one(registration_dict)
-    new_registration = await db["resident_info"].find_one({"_id": result.inserted_id})
+    registration_dict["room_number"] = room_number
 
-    # Convert the Mongo _id to a string and assign to 'id' for the response
-    new_registration["id"] = str(new_registration["_id"])
-    del new_registration["_id"]
-    return new_registration
+    # Insert into MongoDB
+    result = await db["resident_info"].insert_one(registration_dict)
+    new_record = await db["resident_info"].find_one({"_id": result.inserted_id})
+
+    # Convert `_id` to string for your response
+    new_record["_id"] = str(new_record["_id"])
+    return new_record
 
 
 async def get_all_residents(db) -> List[dict]:
