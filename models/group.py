@@ -1,11 +1,16 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
+from models.base import ModelConfig, PyObjectId
 
-class Group(BaseModel):
-    name: str
-    description: str
-    members: Optional[List[str]] = []  # Default to an empty list
 
 class GroupCreate(BaseModel):
+    group_id: Optional[str]  # Group id is optional
     name: str
     description: str
+
+
+class GroupResponse(ModelConfig):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    name: str
+    description: str
+    members: Optional[List[str]] = []
