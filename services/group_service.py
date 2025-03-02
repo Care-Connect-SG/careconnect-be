@@ -1,9 +1,11 @@
 from fastapi import Depends, HTTPException, status
-from bson import ObjectId
+from bson import ObjectId, errors
 from services.user_service import check_permissions
 
 
-async def create_group(db, group_data, role: str = Depends(check_permissions(["Admin"]))):
+async def create_group(
+    db, group_data, role: str = Depends(check_permissions(["Admin"]))
+):
     # Generate a group_id if one isn't provided
     group_id = group_data.group_id if group_data.group_id else str(ObjectId())
 
@@ -17,7 +19,7 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
         "_id": ObjectId(group_id),  # MongoDB ObjectId
         "name": group_data.name,
         "description": group_data.description,
-        "members": []  # Initialize an empty members list
+        "members": [],  # Initialize an empty members list
     }
 
     # Insert the group into the database
@@ -28,7 +30,6 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
     del group_object["_id"]
 
     return group_object
-
 
 
 async def add_user_to_group(
