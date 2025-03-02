@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from bson import ObjectId
+from bson import ObjectId, errors
 from services.user_service import check_permissions
 
 
@@ -28,7 +28,6 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
     del group_object["_id"]
 
     return group_object
-
 
 
 async def add_user_to_group(

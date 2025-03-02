@@ -28,12 +28,10 @@ async def list_groups(db=Depends(get_db)):
 
 @router.put("/edit", response_model=GroupResponse,response_model_by_alias=False)
 async def edit_group(
-    group_id: str, 
-    new_name: str, 
-    new_description: str, 
-    db=Depends(get_db)
+    group_id: str, new_name: str, new_description: str, db=Depends(get_db)
 ):
     return await update_group(db, group_id, new_name, new_description)
+
 
 @router.delete("/delete")
 async def delete_group_route(
@@ -41,6 +39,7 @@ async def delete_group_route(
     db=Depends(get_db)
 ):
     return await delete_group(db, group_id)
+
 
 @router.delete("/remove-user")
 async def remove_user_route(
@@ -54,7 +53,7 @@ async def remove_user_route(
 async def search_group_route(
     group_id: str = None,  
     name: str = None,  # Optional name parameter
-    db=Depends(get_db)
+    db=Depends(get_db),
 ):
     return await search_group(db, group_id, name)
 
