@@ -23,13 +23,17 @@ async def create_resident_record(
     return await create_residentInfo(db, registration)
 
 
-@router.get("/", response_model=List[RegistrationResponse])
+@router.get(
+    "/", response_model=List[RegistrationResponse], response_model_by_alias=False
+)
 @limiter.limit("1/second")
 async def view_all_residents(request: Request, db=Depends(get_db)):
     return await get_all_residents(db)
 
 
-@router.get("/search", response_model=List[RegistrationResponse])
+@router.get(
+    "/search", response_model=List[RegistrationResponse], response_model_by_alias=False
+)
 @limiter.limit("1/second")
 async def search_residents(
     request: Request,
@@ -39,13 +43,17 @@ async def search_residents(
     return await get_residents_by_name(db, name)
 
 
-@router.get("/{resident_id}", response_model=RegistrationResponse)
+@router.get(
+    "/{resident_id}", response_model=RegistrationResponse, response_model_by_alias=False
+)
 @limiter.limit("1/second")
 async def view_resident_by_id(request: Request, resident_id: str, db=Depends(get_db)):
     return await get_resident_by_id(db, resident_id)
 
 
-@router.put("/{resident_id}", response_model=RegistrationResponse)
+@router.put(
+    "/{resident_id}", response_model=RegistrationResponse, response_model_by_alias=False
+)
 @limiter.limit("1/second")
 async def update_resident_record(
     request: Request,

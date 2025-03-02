@@ -5,6 +5,7 @@ from models.resident import RegistrationCreate
 from bson import ObjectId
 from typing import List
 
+
 async def create_residentInfo(db, registration_data: RegistrationCreate):
     # Check if NRIC already exists
     existing = await db["resident_info"].find_one(
