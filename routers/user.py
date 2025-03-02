@@ -1,8 +1,10 @@
 from fastapi import Depends, APIRouter, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import EmailStr
 from db.connection import get_db
 from models.user import UserCreate, UserResponse, Token
 from services.user_service import (
+    get_user_by_email_service,
     register_user,
     login_user,
     get_user_by_id,
@@ -74,3 +76,14 @@ async def update_user_details(
 @limiter.limit("5/second")
 async def delete_user_by_id(request: Request, user_id: str, db=Depends(get_db)):
     await delete_user(db, user_id)
+
+@router.get("/email/{email}", status_code=status.HTTP_200_OK)
+@limiter.limit("5/second")
+async def get_user_by_email(request: Request, email: EmailStr, db=Depends(get_db)):
+    """
+    Fetch user by email from the database.
+    """
+    user = await get_user_by_email_service(db, email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user

@@ -61,6 +61,11 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
         "access_token": access_token,
         "token_type": "bearer",
         "email": user["email"],
+        "name": user["name"],
+        "role": user["role"],
+        "contact_number": user.get("contact_number"),
+        "organisation_rank": user.get("organisation_rank"),
+        "gender": user["gender"],
     }
 
 
@@ -122,3 +127,15 @@ async def get_all_users(
     async for user in users_cursor:
         users.append(UserResponse(**user))
     return users
+
+
+async def get_user_by_email_service(db: AsyncIOMotorDatabase, email: str) -> dict:
+    """
+    Query the database for a user by email.
+    """
+    user = await db["users"].find_one({"email": email})
+    if user:
+        # Convert ObjectId to string
+        user["_id"] = str(user["_id"])
+        return user
+    return None
