@@ -4,26 +4,26 @@ from services.user_service import check_permissions
 
 
 async def create_group(db, group_data, role: str = Depends(check_permissions(["Admin"]))):
-    # Generate a group_id if one isn't provided
-    group_id = group_data.group_id if group_data.group_id else str(ObjectId())
+    # Generate a new group_id automatically.
+    group_id = str(ObjectId())
 
-    # Check if the group name already exists
+    # Check if the group name already exists.
     existing_group = await db["groups"].find_one({"name": group_data.name})
     if existing_group:
         raise HTTPException(status_code=400, detail="Group name already exists")
 
-    # Create the group object with the new group_id and other details
+    # Create the group object with the new group_id and other details.
     group_object = {
-        "_id": ObjectId(group_id),  # MongoDB ObjectId
+        "_id": ObjectId(group_id),  # Create a new ObjectId from the generated id.
         "name": group_data.name,
         "description": group_data.description,
-        "members": []  # Initialize an empty members list
+        "members": []  # Initialize an empty members list.
     }
 
-    # Insert the group into the database
+    # Insert the group into the database.
     await db["groups"].insert_one(group_object)
 
-    # Convert MongoDB _id to a string and assign it to 'id'
+    # Convert MongoDB _id to a string and assign it to 'id'.
     group_object["id"] = str(group_object["_id"])
     del group_object["_id"]
 

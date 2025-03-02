@@ -1,14 +1,19 @@
 from fastapi import APIRouter, Depends
 from db.connection import get_db
 from models.group import GroupCreate
+from services.user_service import check_permissions
 from services.group_service import create_group, add_user_to_group, get_all_groups, update_group, delete_group, remove_user_from_group, search_group, get_user_groups
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
 
 @router.post("/create")
-async def create_new_group(group_data: GroupCreate, db=Depends(get_db)):
+async def create_new_group(
+    group_data: GroupCreate,
+    db=Depends(get_db)
+):
     return await create_group(db, group_data)
+
 
 
 @router.post("/add-user")

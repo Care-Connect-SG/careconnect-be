@@ -4,7 +4,7 @@ from models.base import ModelConfig, PyObjectId
 
 
 class GroupCreate(BaseModel):
-    group_id: Optional[str]  # Group id is optional
+    
     name: str
     description: str
 
