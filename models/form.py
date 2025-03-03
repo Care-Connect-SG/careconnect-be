@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import List
 
 class FormElement(BaseModel):
-    id: str
+    element_id: str
     type: str
     label: str
     helptext: str
