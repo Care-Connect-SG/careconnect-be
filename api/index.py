@@ -6,7 +6,6 @@ from routers.group import router as group_router
 from routers.task import router as task_router
 from routers.resident import router as resident_router
 from routers.medication import router as medication_router
-from routers.announcement import router as announcement_router
 from db.connection import lifespan
 from config import FE_URL
 from slowapi import _rate_limit_exceeded_handler
@@ -33,7 +32,6 @@ app.include_router(group_router)
 app.include_router(task_router)
 app.include_router(resident_router)
 app.include_router(medication_router)
-app.include_router(announcement_router)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

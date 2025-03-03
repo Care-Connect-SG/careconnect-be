@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends
 from db.connection import get_db
 from typing import List
 from models.group import GroupCreate, GroupResponse
-from services.user_service import check_permissions
 from services.group_service import (
     create_group,
     add_user_to_group,
@@ -18,10 +17,7 @@ router = APIRouter(prefix="/groups", tags=["Groups"])
 
 
 @router.post("/create", response_model=GroupResponse, response_model_by_alias=False)
-async def create_new_group(
-    group_data: GroupCreate,
-    db=Depends(get_db)
-):
+async def create_new_group(group_data: GroupCreate, db=Depends(get_db)):
     return await create_group(db, group_data)
 
 
@@ -43,26 +39,19 @@ async def edit_group(
 
 
 @router.delete("/delete")
-async def delete_group_route(
-    group_id: str, 
-    db=Depends(get_db)
-):
+async def delete_group_route(group_id: str, db=Depends(get_db)):
     return await delete_group(db, group_id)
 
 
 @router.delete("/remove-user")
-async def remove_user_route(
-    group_id: str,  # Use group_id here instead of group_name
-    user_id: str,   # Now expecting a user_id instead of user_email
-    db=Depends(get_db)
-):
+async def remove_user_route(group_id: str, user_id: str, db=Depends(get_db)):
     return await remove_user_from_group(db, group_id, user_id)
 
 
 @router.get("/search", response_model=GroupResponse, response_model_by_alias=False)
 async def search_group_route(
-    group_id: str = None,  
-    name: str = None,  # Optional name parameter
+    group_id: str = None,
+    name: str = None,
     db=Depends(get_db),
 ):
     return await search_group(db, group_id, name)

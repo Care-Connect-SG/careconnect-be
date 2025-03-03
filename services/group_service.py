@@ -1,75 +1,61 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from bson import ObjectId, errors
 from services.user_service import check_permissions
 
-async def create_group(db, group_data, role: str = Depends(check_permissions(["Admin"]))):
-    # Generate a new group_id automatically.
+
+async def create_group(
+    db, group_data, role: str = Depends(check_permissions(["Admin"]))
+):
     group_id = str(ObjectId())
 
-    # Check if the group name already exists.
     existing_group = await db["groups"].find_one({"name": group_data.name})
     if existing_group:
         raise HTTPException(status_code=400, detail="Group name already exists")
 
-    # Create the group object using the provided members list (user IDs), if any.
     group_object = {
-        "_id": ObjectId(group_id),  # Create a new ObjectId from the generated id.
+        "_id": ObjectId(group_id),
         "name": group_data.name,
         "description": group_data.description,
-        "members": group_data.members if group_data.members is not None else []
+        "members": group_data.members if group_data.members is not None else [],
     }
 
-    # Insert the group into the database.
     await db["groups"].insert_one(group_object)
-
-    # Convert MongoDB _id to a string and assign it to 'id'.
-    group_object["id"] = str(group_object["_id"])
-    del group_object["_id"]
 
     return group_object
 
 
 async def add_user_to_group(
-    db,
-    group_id: str,  # Expecting a group_id (string)
-    user_id: str,   # Now expecting a user_id instead of email
-    role: str = Depends(check_permissions(["Admin"]))
+    db, group_id: str, user_id: str, role: str = Depends(check_permissions(["Admin"]))
 ):
     try:
         oid = ObjectId(group_id)
     except errors.InvalidId:
         raise HTTPException(status_code=400, detail="Invalid group id format")
 
-    # Find the group by its ObjectId.
     group = await db["groups"].find_one({"_id": oid})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Check if the user is already in the group.
     if user_id in group.get("members", []):
         raise HTTPException(status_code=400, detail="User already in group")
 
-    # Add the user (by their ID) to the group's members list.
     await db["groups"].update_one({"_id": oid}, {"$push": {"members": user_id}})
 
     return {"res": f"User {user_id} added to group with id {group_id}"}
 
 
 async def get_all_groups(db, role: str = Depends(check_permissions(["Admin"]))):
-    groups_cursor = db["groups"].find({})
-    groups = []
-    async for group in groups_cursor:
-        group["_id"] = str(group["_id"])  # Convert ObjectId to string
-        groups.append(group)
+    cursor = db["groups"].find({})
+    groups = [group async for group in cursor]
     return groups
 
 
 async def update_group(
     db,
-    group_id: str,  # Use group_id instead of group_name
+    group_id: str,
     new_name: str,
     new_description: str,
-    role: str = Depends(check_permissions(["Admin"]))
+    role: str = Depends(check_permissions(["Admin"])),
 ):
     try:
         oid = ObjectId(group_id)
@@ -82,38 +68,29 @@ async def update_group(
 
     updated_fields = {"name": new_name, "description": new_description}
 
-    # Update the group document by its ObjectId.
     result = await db["groups"].update_one({"_id": oid}, {"$set": updated_fields})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Group not found for update")
-    
-    # Retrieve the updated document
+
     updated_group = await db["groups"].find_one({"_id": oid})
     if not updated_group:
         raise HTTPException(status_code=404, detail="Updated group not found")
-
-    # Convert ObjectId to string and expose as 'id'
-    updated_group["id"] = str(updated_group["_id"])
-    del updated_group["_id"]
 
     return updated_group
 
 
 async def delete_group(
-    db, 
-    group_id: str, 
-    role: str = Depends(check_permissions(["Admin"]))
+    db, group_id: str, role: str = Depends(check_permissions(["Admin"]))
 ):
     try:
         oid = ObjectId(group_id)
     except errors.InvalidId:
         raise HTTPException(status_code=400, detail="Invalid group id")
-    
+
     group = await db["groups"].find_one({"_id": oid})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Delete the group from the database using its _id.
     await db["groups"].delete_one({"_id": oid})
 
     return {"res": f"Group {group_id} deleted successfully"}
@@ -121,25 +98,22 @@ async def delete_group(
 
 async def remove_user_from_group(
     db,
-    group_id: str,  # Now expecting a group_id
-    user_id: str,   # Now expecting a user_id instead of email
-    role: str = Depends(check_permissions(["Admin"]))
+    group_id: str,
+    user_id: str,
+    role: str = Depends(check_permissions(["Admin"])),
 ):
     try:
         oid = ObjectId(group_id)
     except errors.InvalidId:
         raise HTTPException(status_code=400, detail="Invalid group id format")
 
-    # Find the group using its ObjectId.
     group = await db["groups"].find_one({"_id": oid})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Check if the user (by id) is part of the group.
     if user_id not in group.get("members", []):
         raise HTTPException(status_code=404, detail="User not found in group")
 
-    # Remove the user from the group.
     await db["groups"].update_one({"_id": oid}, {"$pull": {"members": user_id}})
 
     return {"res": f"User {user_id} removed from group {group_id}"}
@@ -149,7 +123,7 @@ async def search_group(
     db,
     group_id: str = None,
     name: str = None,
-    role: str = Depends(check_permissions(["Admin"]))
+    role: str = Depends(check_permissions(["Admin"])),
 ):
     query = {}
     if group_id:
@@ -168,16 +142,12 @@ async def search_group(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Convert ObjectId to string and assign to 'id'
-    group["id"] = str(group["_id"])
-    del group["_id"]
     return group
 
 
 async def get_user_groups(
     db, user_id: str, role: str = Depends(check_permissions(["Admin"]))
 ):
-    # Check if the user exists by user_id (assuming your users are stored with _id as ObjectId)
     try:
         uid = ObjectId(user_id)
     except errors.InvalidId:
@@ -186,13 +156,9 @@ async def get_user_groups(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Find all groups where the user (by id) is a member
     groups_cursor = db["groups"].find({"members": user_id})
     groups = []
     async for group in groups_cursor:
-        # Convert the MongoDB ObjectId to a string and assign it to 'id'
-        group["id"] = str(group["_id"])
-        del group["_id"]
         groups.append(group)
 
     return groups
