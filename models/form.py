@@ -9,13 +9,13 @@ class FormElement(BaseModel):
     required: bool
     options: List[str] = []
 
-class FormBase(BaseModel):
+class FormCreate(BaseModel):
     title: str
     description: str
     creator_id: str
     json_content: List[FormElement]
     status: str
 
-class FormComplete(FormBase):
+class FormResponse(FormCreate):
     _id: str
     created_date: str

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from db.connection import get_db
-from models.form import FormBase
+from models.form import FormCreate
 from services.form_service import (
     create_form,
     get_forms,
@@ -13,7 +13,7 @@ from services.form_service import (
 router = APIRouter(prefix="/incident/forms", tags=["Incident Management Subsystem"])
 
 @router.post("/")
-async def create_new_form(form: FormBase, db=Depends(get_db)):
+async def create_new_form(form: FormCreate, db=Depends(get_db)):
     return await create_form(form, db)
 
 @router.get("/")
@@ -26,7 +26,7 @@ async def get_single_form(form_id: str, db=Depends(get_db)):
     return form
 
 @router.put("/{form_id}")
-async def update_single_form(form_id: str, form: FormBase, db=Depends(get_db)):
+async def update_single_form(form_id: str, form: FormCreate, db=Depends(get_db)):
     return await update_form_fields(form_id, form, db)
 
 @router.put("/{form_id}/publish")

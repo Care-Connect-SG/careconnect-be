@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import HTTPException
-from models.form import FormBase
+from models.form import FormCreate
 from bson import ObjectId
 
 # to-dos
@@ -15,7 +15,7 @@ def convert_id(document):
     return document
 
 
-async def create_form(form: FormBase, db):
+async def create_form(form: FormCreate, db):
     form_data = form.model_dump()
     form_data["created_date"] = datetime.now()
     result = await db["forms"].insert_one(form_data)
@@ -40,7 +40,7 @@ async def get_form_by_id(form_id: str, db):
     return form_data
 
 
-async def update_form_fields(form_id: str, form: FormBase, db):
+async def update_form_fields(form_id: str, form: FormCreate, db):
     try:
         object_id = ObjectId(form_id)
     except Exception:
