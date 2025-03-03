@@ -3,18 +3,12 @@ from fastapi import HTTPException
 from models.form import FormBase
 from bson import ObjectId
 
+from services.utils import convert_id
+
 # to-dos
 # - (must) add user role/access validation once rbac is implemented
 # - (optional) add in pytest
 # - (optional) abstract out form_id validation
-
-def convert_id(document):
-    """Helper function to convert MongoDB ObjectId to a string."""
-    if document and "_id" in document:
-        document["_id"] = str(document["_id"])
-    return document
-
-
 async def create_form(form: FormBase, db):
     form_data = form.model_dump()
     form_data["created_date"] = datetime.now()
@@ -22,9 +16,19 @@ async def create_form(form: FormBase, db):
     return str(result.inserted_id)
 
 
-async def get_forms(db):
-    forms = await db["forms"].find().to_list(100)
-    return [convert_id(form) for form in forms]
+async def get_forms(status: str, db):
+    # forms = await db["forms"].find().to_list(100)
+    # return [convert_id(form) for form in forms]
+    query = {}
+    if status:
+        print(status)
+        query["status"] = status
+    cursor = db["forms"].find(query)
+    forms = []
+    async for form in cursor:
+        forms.append(convert_id(form))
+        print(forms)
+    return forms
 
 
 async def get_form_by_id(form_id: str, db):

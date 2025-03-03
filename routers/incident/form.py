@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends
 from db.connection import get_db
 from models.form import FormBase
 from services.form_service import (
@@ -17,8 +18,8 @@ async def create_new_form(form: FormBase, db=Depends(get_db)):
     return await create_form(form, db)
 
 @router.get("/")
-async def list_forms(db=Depends(get_db)):
-    return await get_forms(db)
+async def list_forms(status: Optional[str] = None, db=Depends(get_db)):
+    return await get_forms(status, db)
 
 @router.get("/{form_id}")
 async def get_single_form(form_id: str, db=Depends(get_db)):
