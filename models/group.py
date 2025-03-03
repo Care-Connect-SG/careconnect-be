@@ -7,6 +7,7 @@ class GroupCreate(BaseModel):
     
     name: str
     description: str
+    members: Optional[List[str]] = []
 
 
 class GroupResponse(ModelConfig):

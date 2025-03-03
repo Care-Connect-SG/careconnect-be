@@ -12,12 +12,12 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
     if existing_group:
         raise HTTPException(status_code=400, detail="Group name already exists")
 
-    # Create the group object with the new group_id and other details.
+    # Create the group object using the provided members list, if any.
     group_object = {
         "_id": ObjectId(group_id),  # Create a new ObjectId from the generated id.
         "name": group_data.name,
         "description": group_data.description,
-        "members": []  # Initialize an empty members list.
+        "members": group_data.members if group_data.members is not None else []
     }
 
     # Insert the group into the database.
@@ -28,6 +28,7 @@ async def create_group(db, group_data, role: str = Depends(check_permissions(["A
     del group_object["_id"]
 
     return group_object
+
 
 
 async def add_user_to_group(
