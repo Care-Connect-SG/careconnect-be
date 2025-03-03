@@ -39,7 +39,7 @@ class TaskCreate(BaseModel):
     priority: Optional[TaskPriority] = None
     category: Optional[TaskCategory] = None
     assigned_to: List[str] = []
-    resident: str
+    resident: List[PyObjectId]
     created_by: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     start_date: Optional[date] = None
