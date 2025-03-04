@@ -5,7 +5,7 @@ from bson import ObjectId
 from models.user import CaregiverTagResponse, UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
-from typing import List
+from typing import List, Optional
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
@@ -106,7 +106,7 @@ async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
 
 # Get All Users (with optional filters)
 async def get_all_users(
-    db: AsyncIOMotorDatabase, name=None, status=None, role=None
+    db: AsyncIOMotorDatabase, name=None, status=None, role=None, email:Optional[str]=None
 ) -> List[UserResponse]:
     filters = {}
     if name:
@@ -115,6 +115,9 @@ async def get_all_users(
         filters["status"] = status
     if role:
         filters["role"] = role
+    if email:
+        print("email: ", email)
+        filters["email"] = email
 
     users_cursor = db["users"].find(filters)
     users = []

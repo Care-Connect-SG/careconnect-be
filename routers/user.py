@@ -11,7 +11,7 @@ from services.user_service import (
     delete_user,
 )
 from utils.limiter import limiter
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -41,8 +41,8 @@ async def login(
 
 @router.get("/", response_model=List[UserResponse], response_model_by_alias=False)
 @limiter.limit("100/minute")
-async def get_users(request: Request, db=Depends(get_db)):
-    users = await get_all_users(db)
+async def get_users(request: Request, email:Optional[str]=None, db=Depends(get_db)):
+    users = await get_all_users(email=email, db=db)
     return users
 
 
