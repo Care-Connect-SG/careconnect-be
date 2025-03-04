@@ -18,8 +18,15 @@ async def create_form(form: FormCreate, db) -> str:
     return str(result.inserted_id)
 
 
-async def get_forms(db) -> List[FormResponse]:
-    forms = await db["forms"].find().to_list(100)
+async def get_forms(status: str, db) -> List[FormResponse]:
+    query = {}
+    if status:
+        print(status)
+        query["status"] = status
+    cursor = db["forms"].find(query)
+    forms = []
+    async for form in cursor:
+        forms.append(form)
     return [FormResponse(**form) for form in forms]
 
 
@@ -32,7 +39,6 @@ async def get_form_by_id(form_id: str, db):
     form_data = await db["forms"].find_one({"_id": object_id})
     if not form_data:
         raise HTTPException(status_code=404, detail="Form not found")
-    form_data["_id"] = str(form_data["_id"])
     return form_data
 
 
