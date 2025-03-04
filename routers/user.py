@@ -1,8 +1,9 @@
-from fastapi import Depends, APIRouter, HTTPException, status, Request
+from fastapi import Depends, APIRouter, HTTPException, status, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from db.connection import get_db
-from models.user import UserCreate, UserResponse, Token
+from models.user import UserCreate, UserResponse, Token, RefreshTokenRequest
+from auth.jwttoken import refresh_access_token
 from services.user_service import (
     get_user_by_email_service,
     register_user,
@@ -80,3 +81,8 @@ async def get_user_by_email(request: Request, email: EmailStr, db=Depends(get_db
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.post("/refresh-token")
+async def refresh_token_endpoint(payload: RefreshTokenRequest):
+    return refresh_access_token(payload.refresh_token)

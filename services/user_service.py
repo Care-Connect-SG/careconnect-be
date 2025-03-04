@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status, Depends
 from auth.hashing import Hash
-from auth.jwttoken import create_access_token, verify_token
+from auth.jwttoken import create_access_token, create_refresh_token, verify_token
 from bson import ObjectId
 from models.user import UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -90,9 +90,13 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
     access_token = create_access_token(
         data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
     )
+    refresh_token = create_refresh_token(
+        data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
+    )
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "email": user["email"],
     }

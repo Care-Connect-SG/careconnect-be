@@ -2,8 +2,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from models.task import TaskStatus, TaskCreate, TaskResponse
 from bson import ObjectId
 from fastapi import HTTPException
-from typing import List, Optional
-from datetime import datetime, date
+from typing import List
+from datetime import datetime, timezone
 
 
 # Create Task
@@ -109,4 +109,19 @@ async def reassign_task(
     )
     if result.modified_count:
         return {"message": "Task reassigned successfully"}
+    raise HTTPException(status_code=404, detail="Task not found")
+
+
+# Complete Task
+async def complete_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
+    update_data = {
+        "status": TaskStatus.COMPLETED,
+        "finished_at": datetime.now(timezone.utc),
+    }
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
+    )
+    if result.modified_count:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+        return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
