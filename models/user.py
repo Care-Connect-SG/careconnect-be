@@ -40,3 +40,9 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     email: str
+
+
+class CaregiverTagResponse(BaseModel):
+    id: str
+    name: str
+    role: str
