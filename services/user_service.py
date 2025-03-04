@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, Depends
 from auth.hashing import Hash
 from auth.jwttoken import create_access_token, verify_token
 from bson import ObjectId
-from models.user import UserResponse, UserCreate
+from models.user import CaregiverTagResponse, UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
 from typing import List
@@ -121,3 +121,18 @@ async def get_all_users(
     async for user in users_cursor:
         users.append(UserResponse(**user))
     return users
+
+
+# Search for caregiver by name - for use in report tagging
+async def get_caregiver_tags(search_key: str, limit: int, db) -> List[CaregiverTagResponse]:
+    if search_key:
+        cursor = db["users"].find({"name": {"$regex": search_key, "$options": "i"}}, {"_id": 1, "name": 1, "role": 1}).limit(limit)
+    else:
+        cursor = db["users"].find()
+
+    caregivers = []
+    async for record in cursor:
+        record["id"] = str(record["_id"])
+        del record["_id"]
+        caregivers.append(record)
+    return caregivers
