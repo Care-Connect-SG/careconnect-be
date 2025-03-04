@@ -46,9 +46,6 @@ async def get_all_residents(db) -> List[dict]:
     return residents
 
 
-from fastapi import HTTPException
-
-
 async def get_residents_by_name(db, name: str) -> List[dict]:
     residents = []
     cursor = db["resident_info"].find({"full_name": {"$regex": name, "$options": "i"}})
