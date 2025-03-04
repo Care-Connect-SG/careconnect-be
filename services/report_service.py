@@ -1,10 +1,10 @@
 from datetime import datetime
 from bson import ObjectId
 from fastapi import HTTPException
-from models.report import ReportBase
+from models.report import ReportCreate
 
 
-async def create_report(report: ReportBase, db):
+async def create_report(report: ReportCreate, db):
     report_data = report.model_dump()
     report_data["created_date"] = datetime.now()
     result = await db["reports"].insert_one(report_data)
@@ -36,7 +36,7 @@ async def get_report_by_id(report_id: str, db):
     return report
 
 
-async def update_report(report_id: str, report: ReportBase, db):
+async def update_report(report_id: str, report: ReportCreate, db):
     try:
         object_id = ObjectId(report_id)
     except Exception:
@@ -61,7 +61,6 @@ async def remove_report(report_id: str, db):
             raise HTTPException(status_code=404, detail="Report not found")
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid report ID")
-
 
 
 
