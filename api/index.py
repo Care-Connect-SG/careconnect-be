@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from routers.limiter import limiter
+from utils.limiter import limiter
 from routers.user import router as user_router
 from routers.group import router as group_router
 from routers.task import router as task_router
@@ -8,10 +8,10 @@ from routers.resident import router as resident_router
 from routers.medication import router as medication_router
 from routers.incident.form import router as form_router
 from db.connection import lifespan
-from config import FE_URL
+from utils.config import FE_URL
+from utils.bearer import verify_bearer_token
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from bearer import verify_bearer_token
 
 app = FastAPI(root_path="/api/v1", lifespan=lifespan)
 # app = FastAPI(
@@ -19,7 +19,6 @@ app = FastAPI(root_path="/api/v1", lifespan=lifespan)
 # )
 # app = FastAPI(root_path="/api/v1")
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FE_URL],

@@ -12,7 +12,8 @@ from services.task_service import (
     update_task_status,
     reassign_task,
 )
-from .limiter import limiter
+from utils.limiter import limiter
+from services.user_service import require_roles
 from typing import Optional, List
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -24,7 +25,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
     response_model=List[TaskResponse],
     response_model_by_alias=False,
 )
-@limiter.limit("5/second")
+@limiter.limit("100/minute")
 async def search_for_tasks(
     request: Request,
     status_filter: Optional[TaskStatus] = None,
@@ -44,7 +45,7 @@ async def search_for_tasks(
     status_code=status.HTTP_201_CREATED,
     response_model_by_alias=False,
 )
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def create_new_task(
     request: Request, task: TaskCreate, db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -58,7 +59,7 @@ async def create_new_task(
     response_model=List[TaskResponse],
     response_model_by_alias=False,
 )
-@limiter.limit("5/second")
+@limiter.limit("100/minute")
 async def fetch_tasks(
     request: Request,
     assigned_to: Optional[str] = None,
@@ -66,7 +67,11 @@ async def fetch_tasks(
     priority: Optional[str] = None,
     category: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
+    if user.get("role") != "Admin":
+        assigned_to = user.get("id")
+
     tasks = await get_tasks(db, assigned_to, status_filter, priority, category)
     return tasks
 
@@ -77,7 +82,7 @@ async def fetch_tasks(
     response_model=TaskResponse,
     response_model_by_alias=False,
 )
-@limiter.limit("5/second")
+@limiter.limit("100/minute")
 async def fetch_task_by_id(
     request: Request, task_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -91,7 +96,7 @@ async def fetch_task_by_id(
     response_model=TaskResponse,
     response_model_by_alias=False,
 )
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def modify_task(
     request: Request,
     task_id: str,
@@ -105,7 +110,7 @@ async def modify_task(
 @router.delete(
     "/{task_id}", summary="Delete a task", status_code=status.HTTP_204_NO_CONTENT
 )
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def remove_task(
     request: Request, task_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -119,7 +124,7 @@ async def remove_task(
     response_model=TaskResponse,
     response_model_by_alias=False,
 )
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def modify_task_status(
     request: Request,
     task_id: str,
@@ -133,7 +138,7 @@ async def modify_task_status(
 @router.patch(
     "/{task_id}/reassign", summary="Reassign a task", response_model=TaskResponse
 )
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def modify_task_assignment(
     request: Request,
     task_id: str,

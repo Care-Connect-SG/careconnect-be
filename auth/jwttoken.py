@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from config import SECRET_KEY
+from utils.config import SECRET_KEY
 from fastapi import HTTPException
 
 ALGORITHM = "HS256"
@@ -15,19 +15,22 @@ def create_access_token(data: dict):
 
 
 def verify_token(token: str, credentials_exception):
+    print("verify_token called with token:", token)  # Debug print
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print("Decoded payload:", payload)  # Debug print
+        user_id: str = payload.get("id")
         email: str = payload.get("sub")
-
-        if email is None:
-            raise HTTPException(
-                status_code=401, detail="Invalid token: Missing 'sub' field"
+        role: str = payload.get("role")
+        if user_id is None or email is None or role is None:
+            print(
+                "Missing fields in token. id:", user_id, "email:", email, "role:", role
             )
-
-        return {"email": email}
-
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
+            raise HTTPException(status_code=401, detail="Invalid token: Missing fields")
+        return {"id": user_id, "email": email, "role": role}
     except jwt.ExpiredSignatureError:
+        print("Token expired")
         raise HTTPException(status_code=401, detail="Token expired")
+    except JWTError as e:
+        print("JWTError:", e)
+        raise credentials_exception
