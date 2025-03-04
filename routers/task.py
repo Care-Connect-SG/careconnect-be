@@ -13,6 +13,7 @@ from services.task_service import (
     reassign_task,
 )
 from utils.limiter import limiter
+from services.user_service import require_roles
 from typing import Optional, List
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -66,7 +67,11 @@ async def fetch_tasks(
     priority: Optional[str] = None,
     category: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
+    if user.get("role") != "Admin":
+        assigned_to = user.get("id")
+
     tasks = await get_tasks(db, assigned_to, status_filter, priority, category)
     return tasks
 

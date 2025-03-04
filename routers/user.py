@@ -20,14 +20,13 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.post(
     "/register",
-    response_model=UserResponse,
-    response_model_by_alias=False,
+
     status_code=status.HTTP_201_CREATED,
 )
 @limiter.limit("10/minute")
 async def create_user(request: Request, user_data: UserCreate, db=Depends(get_db)):
     user = await register_user(db, user_data)
-    return user
+    return {"message": "User registered successfully"}
 
 
 @router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)

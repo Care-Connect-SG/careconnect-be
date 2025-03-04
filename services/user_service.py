@@ -5,9 +5,38 @@ from bson import ObjectId
 from models.user import UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
-from typing import List
+from typing import List, Dict
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
+
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict:
+    """
+    Decodes and verifies the JWT token, returning the full user payload.
+    Expects the token payload to include at least "id", "sub", and "role".
+    """
+    return verify_token(
+        token,
+        credentials_exception=HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        ),
+    )
+
+
+def require_roles(required_roles: List[str]):
+    """
+    Dependency that ensures the user has one of the required roles.
+    Returns the full user payload if the check passes.
+    """
+
+    def dependency(user: Dict = Depends(get_current_user)) -> Dict:
+        if user.get("role") not in required_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+        return user
+
+    return dependency
 
 
 def get_user_role(token: str = Depends(oauth2_scheme)):
@@ -37,7 +66,7 @@ def check_permissions(required_roles: list):
 async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserResponse:
     existing_user = await db["users"].find_one({"email": user.email})
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
 
     hashed_pass = Hash.bcrypt(user.password)
     user_dict = user.model_dump(exclude_none=True)
@@ -56,18 +85,15 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
 
-    access_token = create_access_token(data={"sub": user["email"]})
+    access_token = create_access_token(
+        data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
+    )
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "email": user["email"],
-        "name": user["name"],
-        "role": user["role"],
-        "contact_number": user.get("contact_number"),
-        "organisation_rank": user.get("organisation_rank"),
-        "gender": user["gender"],
+        "email": user["email"]
     }
-
 
 # Get User by ID (Read)
 async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse:
