@@ -20,14 +20,20 @@ async def create_new_form(form: FormCreate, db=Depends(get_db)):
 
 
 @router.get(
-    "/", summary="Retrieve all incident forms", response_model=List[FormResponse],  response_model_by_alias=False
+    "/",
+    summary="Retrieve all incident forms",
+    response_model=List[FormResponse],
+    response_model_by_alias=False,
 )
 async def list_forms(db=Depends(get_db)):
     return await get_forms(db)
 
 
 @router.get(
-    "/{form_id}", summary="Retrieve a specific form by Id", response_model=FormResponse,  response_model_by_alias=False
+    "/{form_id}",
+    summary="Retrieve a specific form by Id",
+    response_model=FormResponse,
+    response_model_by_alias=False,
 )
 async def get_single_form(form_id: str, db=Depends(get_db)):
     form = await get_form_by_id(form_id, db)
