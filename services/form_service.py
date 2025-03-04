@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 from fastapi import HTTPException
 from models.form import FormCreate, FormResponse
 from bson import ObjectId
@@ -8,7 +9,7 @@ from bson import ObjectId
 # - (optional) add in pytest
 # - (optional) abstract out form_id validation
 
-async def create_form(form: FormCreate, db):
+async def create_form(form: FormCreate, db) -> str:
     form_data = form.model_dump()
     form_data["created_date"] = str(datetime.now())
     form_data["_id"] = ObjectId()
@@ -17,7 +18,7 @@ async def create_form(form: FormCreate, db):
     return str(result.inserted_id)
 
 
-async def get_forms(db):
+async def get_forms(db) -> List[FormResponse]:
     forms = await db["forms"].find().to_list(100)
     return [FormResponse(**form) for form in forms]
 
@@ -35,7 +36,7 @@ async def get_form_by_id(form_id: str, db):
     return form_data
 
 
-async def update_form_fields(form_id: str, form: FormCreate, db):
+async def update_form_fields(form_id: str, form: FormCreate, db) -> str:
     try:
         object_id = ObjectId(form_id)
     except Exception:
@@ -53,7 +54,7 @@ async def update_form_fields(form_id: str, form: FormCreate, db):
     return form_id
 
 
-async def update_form_status(form_id: str, db):
+async def update_form_status(form_id: str, db) -> str:
     try:
         object_id = ObjectId(form_id)
     except Exception:
