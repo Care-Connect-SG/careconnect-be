@@ -1,7 +1,9 @@
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from models.base import PyObjectId
+
 
 class FormElement(BaseModel):
     element_id: str
@@ -11,6 +13,7 @@ class FormElement(BaseModel):
     required: bool
     options: List[str] = []
 
+
 class FormCreate(BaseModel):
     title: str
     description: str
@@ -18,6 +21,7 @@ class FormCreate(BaseModel):
     json_content: List[FormElement]
     status: str
 
+
 class FormResponse(FormCreate):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    created_date: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
