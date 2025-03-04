@@ -1,5 +1,7 @@
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+from models.base import PyObjectId
 
 class FormElement(BaseModel):
     element_id: str
@@ -17,5 +19,5 @@ class FormCreate(BaseModel):
     status: str
 
 class FormResponse(FormCreate):
-    _id: str
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     created_date: str

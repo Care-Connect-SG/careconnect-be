@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import HTTPException
-from models.form import FormCreate
+from models.form import FormCreate, FormResponse
 from bson import ObjectId
 
 # to-dos
@@ -8,23 +8,18 @@ from bson import ObjectId
 # - (optional) add in pytest
 # - (optional) abstract out form_id validation
 
-def convert_id(document):
-    """Helper function to convert MongoDB ObjectId to a string."""
-    if document and "_id" in document:
-        document["_id"] = str(document["_id"])
-    return document
-
-
 async def create_form(form: FormCreate, db):
     form_data = form.model_dump()
-    form_data["created_date"] = datetime.now()
+    form_data["created_date"] = str(datetime.now())
+    form_data["_id"] = ObjectId()
     result = await db["forms"].insert_one(form_data)
+    print("inserted_id: ", result.inserted_id)
     return str(result.inserted_id)
 
 
 async def get_forms(db):
     forms = await db["forms"].find().to_list(100)
-    return [convert_id(form) for form in forms]
+    return [FormResponse(**form) for form in forms]
 
 
 async def get_form_by_id(form_id: str, db):
