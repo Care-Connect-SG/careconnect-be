@@ -9,6 +9,7 @@ from bson import ObjectId
 # - (optional) add in pytest
 # - (optional) abstract out form_id validation
 
+
 async def create_form(form: FormCreate, db) -> str:
     form_data = form.model_dump()
     form_data["created_date"] = str(datetime.now())
@@ -24,13 +25,13 @@ async def get_forms(db) -> List[FormResponse]:
 
 async def get_form_by_id(form_id: str, db):
     try:
-        object_id = ObjectId(form_id) 
+        object_id = ObjectId(form_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid form ID format")
 
-    form_data = await db["forms"].find_one({"_id": object_id})  
+    form_data = await db["forms"].find_one({"_id": object_id})
     if not form_data:
-        raise HTTPException(status_code=404, detail="Form not found")  
+        raise HTTPException(status_code=404, detail="Form not found")
     form_data["_id"] = str(form_data["_id"])
     return form_data
 
