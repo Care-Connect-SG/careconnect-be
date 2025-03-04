@@ -9,13 +9,13 @@ from services.medication_service import (
     delete_medication,
 )
 from db.connection import get_db
-from .limiter import limiter
+from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents/{resident_id}/medications", tags=["Medications"])
 
 
 @router.post("/", response_model=MedicationResponse)
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def add_medication(
     request: Request, resident_id: str, medication: MedicationCreate, db=Depends(get_db)
 ):
@@ -23,13 +23,13 @@ async def add_medication(
 
 
 @router.get("/", response_model=List[MedicationResponse])
-@limiter.limit("1/second")
+@limiter.limit("100/minute")
 async def list_medications(request: Request, resident_id: str, db=Depends(get_db)):
     return await get_medications_by_resident(db, resident_id)
 
 
 @router.get("/{medication_id}", response_model=MedicationResponse)
-@limiter.limit("1/second")
+@limiter.limit("100/minute")
 async def get_medication(
     request: Request, resident_id: str, medication_id: str, db=Depends(get_db)
 ):
@@ -37,7 +37,7 @@ async def get_medication(
 
 
 @router.put("/{medication_id}", response_model=MedicationResponse)
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def update_medication_record(
     request: Request,
     resident_id: str,
@@ -49,7 +49,7 @@ async def update_medication_record(
 
 
 @router.delete("/{medication_id}")
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def delete_medication_record(
     request: Request, resident_id: str, medication_id: str, db=Depends(get_db)
 ):
