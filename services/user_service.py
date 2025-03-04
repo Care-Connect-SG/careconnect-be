@@ -33,7 +33,7 @@ def check_permissions(required_roles: list):
     return _check_permissions
 
 
-# 1. Register User
+# Register User
 async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserResponse:
     existing_user = await db["users"].find_one({"email": user.email})
     if existing_user:
@@ -48,7 +48,7 @@ async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserRespo
     return UserResponse(**user_dict)
 
 
-# 2. Login User (Authenticate)
+# Login User (Authenticate)
 async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> dict:
     user = await db["users"].find_one({"email": username})
     if not user or not Hash.verify(user["password"], password):
@@ -69,7 +69,7 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
     }
 
 
-# 3. Get User by ID (Read)
+# Get User by ID (Read)
 async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse:
     try:
         user_object_id = ObjectId(user_id)
@@ -83,7 +83,7 @@ async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse
     return UserResponse(**user)
 
 
-# 4. Update User (Update)
+# Update User (Update)
 async def update_user(
     db: AsyncIOMotorDatabase, user_id: str, user_data: dict
 ) -> UserResponse:
@@ -91,7 +91,6 @@ async def update_user(
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # If a password update is included, hash it.
     if "password" in user_data:
         user_data["password"] = Hash.bcrypt(user_data["password"])
 
@@ -100,7 +99,7 @@ async def update_user(
     return UserResponse(**updated_user)
 
 
-# 5. Delete User (Delete)
+# Delete User (Delete)
 async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     user = await db["users"].find_one({"_id": ObjectId(user_id)})
     if not user:
@@ -110,7 +109,7 @@ async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     return {"res": f"User with ID {user_id} deleted successfully"}
 
 
-# 6. Get All Users (with optional filters)
+# Get All Users (with optional filters)
 async def get_all_users(
     db: AsyncIOMotorDatabase, name=None, status=None, role=None
 ) -> List[UserResponse]:

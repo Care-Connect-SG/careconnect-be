@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Security, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from config import SECRET_TOKEN
+from utils.config import SECRET_TOKEN
 
 bearer_scheme = HTTPBearer()
 
