@@ -66,7 +66,9 @@ def check_permissions(required_roles: list):
 async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserResponse:
     existing_user = await db["users"].find_one({"email": user.email})
     if existing_user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
+        )
 
     hashed_pass = Hash.bcrypt(user.password)
     user_dict = user.model_dump(exclude_none=True)
@@ -92,8 +94,9 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "email": user["email"]
+        "email": user["email"],
     }
+
 
 # Get User by ID (Read)
 async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse:
