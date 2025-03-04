@@ -2,7 +2,6 @@ from datetime import datetime
 from bson import ObjectId
 from fastapi import HTTPException
 from models.report import ReportBase
-from services.utils import convert_id
 
 
 async def create_report(report: ReportBase, db):
@@ -19,7 +18,8 @@ async def get_reports(status: str, db):
     cursor = db["reports"].find(query)
     reports = []
     async for report in cursor:
-        reports.append(convert_id(report))
+        report["id"] = str(report["_id"])
+        reports.append(report)
     return reports
 
 
