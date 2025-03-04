@@ -24,4 +24,4 @@ class FormCreate(BaseModel):
 
 class FormResponse(FormCreate):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_date: str
