@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from config import SECRET_KEY
+from utils.config import SECRET_KEY
 from fastapi import HTTPException
 
 ALGORITHM = "HS256"
