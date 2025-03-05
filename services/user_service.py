@@ -99,6 +99,7 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
         "refresh_token": refresh_token,
         "token_type": "bearer",
         "email": user["email"],
+        "name": user["name"],
     }
 
 
