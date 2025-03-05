@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from enum import Enum
 from models.base import ModelConfig, PyObjectId
@@ -41,7 +41,7 @@ class TaskCreate(BaseModel):
     assigned_to: PyObjectId
     residents: List[PyObjectId]
     created_by: PyObjectId
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     start_date: datetime
     due_date: datetime
     recurring: Optional[Recurrence] = None
@@ -63,7 +63,7 @@ class TaskResponse(ModelConfig):
     assigned_to: PyObjectId
     residents: List[PyObjectId]
     created_by: PyObjectId
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     start_date: datetime
     due_date: datetime
     recurring: Optional[Recurrence] = None

@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter, Request, HTTPException, status
+from fastapi import Depends, APIRouter, Request, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
 from models.task import TaskResponse, TaskCreate, TaskStatus
@@ -11,6 +11,7 @@ from services.task_service import (
     search_tasks,
     update_task_status,
     reassign_task,
+    complete_task,
 )
 from utils.limiter import limiter
 from services.user_service import require_roles
@@ -147,3 +148,19 @@ async def modify_task_assignment(
 ):
     updated_task = await reassign_task(db, task_id, new_assigned_to)
     return updated_task
+
+
+@router.post(
+    "/{task_id}/complete",
+    summary="Mark a task as completed",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def complete_task_route(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    completed_task = await complete_task(db, task_id)
+    return completed_task
