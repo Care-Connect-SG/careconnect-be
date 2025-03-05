@@ -100,10 +100,6 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
         "token_type": "bearer",
         "email": user["email"],
         "name": user["name"],
-        "role": user["role"],
-        "contact_number": user.get("contact_number"),
-        "organisation_rank": user.get("organisation_rank"),
-        "gender": user["gender"],
     }
 
 
