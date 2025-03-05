@@ -11,20 +11,20 @@ from services.resident_service import (
     get_all_residents_by_nurse
 )
 from db.connection import get_db
-from .limiter import limiter
+from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents", tags=["Resident Records"])
 
 
 @router.post("/createNewRecord")
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def create_resident_record(
     request: Request, registration: RegistrationCreate, db=Depends(get_db)
 ):
     return await create_residentInfo(db, registration)
 
 @router.get("/", response_model=List[RegistrationResponse], response_model_by_alias=False)
-@limiter.limit("1/second")
+@limiter.limit("100/minute")
 async def list_residents(
     request: Request,
     db=Depends(get_db),
@@ -38,7 +38,7 @@ async def list_residents(
 @router.get(
     "/search", response_model=List[RegistrationResponse], response_model_by_alias=False
 )
-@limiter.limit("1/second")
+@limiter.limit("100/minute")
 async def search_residents(
     request: Request,
     name: str = Query(..., description="Substring to search in resident names"),
@@ -50,7 +50,7 @@ async def search_residents(
 @router.get(
     "/{resident_id}", response_model=RegistrationResponse, response_model_by_alias=False
 )
-@limiter.limit("1/second")
+@limiter.limit("100/minute")
 async def view_resident_by_id(request: Request, resident_id: str, db=Depends(get_db)):
     return await get_resident_by_id(db, resident_id)
 
@@ -58,7 +58,7 @@ async def view_resident_by_id(request: Request, resident_id: str, db=Depends(get
 @router.put(
     "/{resident_id}", response_model=RegistrationResponse, response_model_by_alias=False
 )
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def update_resident_record(
     request: Request,
     resident_id: str,
@@ -69,7 +69,7 @@ async def update_resident_record(
 
 
 @router.delete("/{resident_id}")
-@limiter.limit("1/second")
+@limiter.limit("10/minute")
 async def delete_resident_record(
     request: Request, resident_id: str, db=Depends(get_db)
 ):

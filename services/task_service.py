@@ -3,23 +3,12 @@ from models.task import TaskStatus, TaskCreate, TaskResponse
 from bson import ObjectId
 from fastapi import HTTPException
 from typing import List
-from datetime import datetime, date
-
-
-def convert_date_fields(data: dict) -> dict:
-    """
-    Convert any datetime.date objects in the dictionary to datetime.datetime objects.
-    """
-    for key, value in data.items():
-        if isinstance(value, date) and not isinstance(value, datetime):
-            data[key] = datetime.combine(value, datetime.min.time())
-    return data
+from datetime import datetime, timezone
 
 
 # Create Task
 async def create_task(db: AsyncIOMotorDatabase, task: TaskCreate) -> TaskResponse:
     task_dict = task.model_dump(by_alias=True, exclude_none=True)
-    task_dict = convert_date_fields(task_dict)
     task_dict["_id"] = ObjectId()
     await db.tasks.insert_one(task_dict)
     return TaskResponse(**task_dict)
@@ -60,7 +49,6 @@ async def update_task(
     db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskCreate
 ) -> TaskResponse:
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
-    update_data = convert_date_fields(update_data)
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
@@ -121,4 +109,19 @@ async def reassign_task(
     )
     if result.modified_count:
         return {"message": "Task reassigned successfully"}
+    raise HTTPException(status_code=404, detail="Task not found")
+
+
+# Complete Task
+async def complete_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
+    update_data = {
+        "status": TaskStatus.COMPLETED,
+        "finished_at": datetime.now(timezone.utc),
+    }
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
+    )
+    if result.modified_count:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+        return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
