@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter, Request, status
+from fastapi import Depends, APIRouter, Request, status, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
 from models.task import TaskResponse, TaskCreate, TaskStatus
@@ -14,11 +14,10 @@ from services.task_service import (
     complete_task,
 )
 from utils.limiter import limiter
-from services.user_service import require_roles
+from services.user_service import require_roles, get_current_user
 from typing import Optional, List
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
-
 
 @router.get(
     "/search",
@@ -38,21 +37,19 @@ async def search_for_tasks(
     tasks = await search_tasks(db, status_filter, priority, category, assigned_to)
     return tasks
 
-
 @router.post(
     "/",
     summary="Create a new task",
-    response_model=TaskResponse,
+    response_model=List[TaskResponse],
     status_code=status.HTTP_201_CREATED,
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
 async def create_new_task(
-    request: Request, task: TaskCreate, db: AsyncIOMotorDatabase = Depends(get_db)
+    request: Request, task: TaskCreate, db: AsyncIOMotorDatabase = Depends(get_db), current_user: dict = Depends(get_current_user)
 ):
-    new_task = await create_task(db, task)
+    new_task = await create_task(db, task, current_user)
     return new_task
-
 
 @router.get(
     "/",
@@ -72,10 +69,8 @@ async def fetch_tasks(
 ):
     if user.get("role") != "Admin":
         assigned_to = user.get("id")
-
     tasks = await get_tasks(db, assigned_to, status_filter, priority, category)
     return tasks
-
 
 @router.get(
     "/{task_id}",
@@ -89,7 +84,6 @@ async def fetch_task_by_id(
 ):
     task = await get_task_by_id(db, task_id)
     return task
-
 
 @router.put(
     "/{task_id}",
@@ -107,7 +101,6 @@ async def modify_task(
     updated_task = await update_task(db, task_id, task)
     return updated_task
 
-
 @router.delete(
     "/{task_id}", summary="Delete a task", status_code=status.HTTP_204_NO_CONTENT
 )
@@ -117,7 +110,6 @@ async def remove_task(
 ):
     result = await delete_task(db, task_id)
     return {"message": "Task deleted successfully", "result": result}
-
 
 @router.patch(
     "/{task_id}/status",
@@ -135,9 +127,11 @@ async def modify_task_status(
     updated_task = await update_task_status(db, task_id, new_status)
     return updated_task
 
-
 @router.patch(
-    "/{task_id}/reassign", summary="Reassign a task", response_model=TaskResponse
+    "/{task_id}/reassign",
+    summary="Reassign a task",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
 async def modify_task_assignment(
@@ -148,7 +142,6 @@ async def modify_task_assignment(
 ):
     updated_task = await reassign_task(db, task_id, new_assigned_to)
     return updated_task
-
 
 @router.post(
     "/{task_id}/complete",

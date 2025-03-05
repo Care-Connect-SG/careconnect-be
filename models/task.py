@@ -35,41 +35,38 @@ class Recurrence(str, Enum):
 class TaskCreate(BaseModel):
     task_title: str = Field(..., min_length=3, max_length=255)
     task_details: Optional[str] = None
+    media: Optional[List[str]] = None
+    notes: Optional[str] = None
     status: TaskStatus = TaskStatus.ASSIGNED
     priority: Optional[TaskPriority] = None
     category: Optional[TaskCategory] = None
-    assigned_to: PyObjectId
     residents: List[PyObjectId]
-    created_by: PyObjectId
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     start_date: datetime
     due_date: datetime
     recurring: Optional[Recurrence] = None
     end_recurring_date: Optional[datetime] = None
     remind_prior: Optional[int] = None
-    finished_at: Optional[datetime] = None
-    media: Optional[List[str]] = None
-    notes: Optional[str] = None
     is_ai_generated: bool = False
+    assigned_to: PyObjectId
 
 
 class TaskResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     task_title: str = Field(..., min_length=3, max_length=255)
     task_details: Optional[str] = None
+    media: Optional[List[str]] = None
+    notes: Optional[str] = None
     status: TaskStatus = TaskStatus.ASSIGNED
     priority: Optional[TaskPriority] = None
     category: Optional[TaskCategory] = None
-    assigned_to: PyObjectId
-    residents: List[PyObjectId]
-    created_by: PyObjectId
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     start_date: datetime
     due_date: datetime
     recurring: Optional[Recurrence] = None
     end_recurring_date: Optional[datetime] = None
     remind_prior: Optional[int] = None
     finished_at: Optional[datetime] = None
-    media: Optional[List[str]] = None
-    notes: Optional[str] = None
     is_ai_generated: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    assigned_to: PyObjectId
+    resident: PyObjectId
+    created_by: PyObjectId

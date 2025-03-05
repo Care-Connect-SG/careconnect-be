@@ -5,13 +5,19 @@ from fastapi import HTTPException
 from typing import List
 from datetime import datetime, timezone
 
-
 # Create Task
-async def create_task(db: AsyncIOMotorDatabase, task: TaskCreate) -> TaskResponse:
-    task_dict = task.model_dump(by_alias=True, exclude_none=True)
-    task_dict["_id"] = ObjectId()
-    await db.tasks.insert_one(task_dict)
-    return TaskResponse(**task_dict)
+async def create_task(db, task_data: TaskCreate, current_user: dict) -> List[TaskResponse]:
+    tasks_created = []
+    for resident_id in task_data.residents:
+        task_doc = task_data.model_dump(exclude={"residents"})
+        task_doc["resident"] = ObjectId(resident_id)
+        task_doc["created_by"] = ObjectId(current_user["id"])
+        task_doc["created_at"] = datetime.now(timezone.utc)
+        task_doc["assigned_to"] = ObjectId(task_data.assigned_to)
+        result = await db.tasks.insert_one(task_doc)
+        new_task = await db.tasks.find_one({"_id": result.inserted_id})
+        tasks_created.append(TaskResponse(**new_task))
+    return tasks_created
 
 
 # Get All Tasks (With Filters)
@@ -35,14 +41,12 @@ async def get_tasks(
     tasks = await db.tasks.find(filters).to_list(length=100)
     return [TaskResponse(**task) for task in tasks]
 
-
 # Get Task by ID
 async def get_task_by_id(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
     task = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if task:
         return TaskResponse(**task)
     raise HTTPException(status_code=404, detail="Task not found")
-
 
 # Update Task
 async def update_task(
@@ -57,14 +61,12 @@ async def update_task(
         return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
 
-
 # Delete Task
 async def delete_task(db: AsyncIOMotorDatabase, task_id: str) -> dict:
     result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
     if result.deleted_count:
         return {"message": "Task deleted successfully"}
     raise HTTPException(status_code=404, detail="Task not found")
-
 
 # Search Tasks
 async def search_tasks(
@@ -87,30 +89,32 @@ async def search_tasks(
     tasks = await db.tasks.find(filters).to_list(length=100)
     return [TaskResponse(**task) for task in tasks]
 
-
 # Update Task Status
 async def update_task_status(
     db: AsyncIOMotorDatabase, task_id: str, new_status: TaskStatus
-) -> dict:
+) -> TaskResponse:
+    update_data = {
+        "status": new_status,
+    }
     result = await db.tasks.update_one(
-        {"_id": ObjectId(task_id)}, {"$set": {"status": new_status}}
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
     if result.modified_count:
-        return {"message": "Task status updated successfully"}
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+        return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
-
 
 # Reassign Task
 async def reassign_task(
     db: AsyncIOMotorDatabase, task_id: str, new_assigned_to: List[str]
-) -> dict:
+) -> TaskResponse:
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": {"assigned_to": new_assigned_to}}
     )
     if result.modified_count:
-        return {"message": "Task reassigned successfully"}
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+        return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
-
 
 # Complete Task
 async def complete_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
