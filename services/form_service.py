@@ -12,7 +12,7 @@ from bson import ObjectId
 
 async def create_form(form: FormCreate, db) -> str:
     form_data = form.model_dump()
-    form_data["created_date"] = str(datetime.now())
+    form_data["created_at"] = str(datetime.now())
     result = await db["forms"].insert_one(form_data)
     return str(result.inserted_id)
 
