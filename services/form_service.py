@@ -14,7 +14,6 @@ async def create_form(form: FormCreate, db) -> str:
     form_data = form.model_dump()
     form_data["created_date"] = str(datetime.now())
     result = await db["forms"].insert_one(form_data)
-    print("inserted_id: ", result.inserted_id)
     return str(result.inserted_id)
 
 
