@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime, date
+from datetime import datetime, timezone
 from typing import Optional, List
 from enum import Enum
 from models.base import ModelConfig, PyObjectId
@@ -38,14 +38,14 @@ class TaskCreate(BaseModel):
     status: TaskStatus = TaskStatus.ASSIGNED
     priority: Optional[TaskPriority] = None
     category: Optional[TaskCategory] = None
-    assigned_to: List[str] = []
-    resident: str
-    created_by: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
+    assigned_to: PyObjectId
+    residents: List[PyObjectId]
+    created_by: PyObjectId
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    start_date: datetime
+    due_date: datetime
     recurring: Optional[Recurrence] = None
-    end_recurring_date: Optional[date] = None
+    end_recurring_date: Optional[datetime] = None
     remind_prior: Optional[int] = None
     finished_at: Optional[datetime] = None
     media: Optional[List[str]] = None
@@ -60,14 +60,14 @@ class TaskResponse(ModelConfig):
     status: TaskStatus = TaskStatus.ASSIGNED
     priority: Optional[TaskPriority] = None
     category: Optional[TaskCategory] = None
-    assigned_to: List[str] = []
-    resident: str
-    created_by: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
+    assigned_to: PyObjectId
+    residents: List[PyObjectId]
+    created_by: PyObjectId
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    start_date: datetime
+    due_date: datetime
     recurring: Optional[Recurrence] = None
-    end_recurring_date: Optional[date] = None
+    end_recurring_date: Optional[datetime] = None
     remind_prior: Optional[int] = None
     finished_at: Optional[datetime] = None
     media: Optional[List[str]] = None

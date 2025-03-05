@@ -77,7 +77,7 @@ We will be loosely following [conventional commits](https://www.conventionalcomm
 | test     | Addings or changing tests, basically any change within the `test` directory           |
 | refactor | Changes to source code that neither add a feature nor fixes a bug                     |
 | build    | Changes to CI or build configuration files (Docker, github actions)                   |
-| chore    | Anything else that doesn't modify any `src` or `test` files (linters, tsconfig, etc.) |
+| chore    | Anything else that doesn't modify any main codes or `test` files (linters, tsconfig, etc.) |
 | revert   | Reverts a previous commit                                                             |
 
 ## Contributing

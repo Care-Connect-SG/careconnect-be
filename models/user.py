@@ -24,8 +24,10 @@ class UserCreate(BaseModel):
     role: Role
     organisation_rank: Optional[str] = None
     gender: Gender
-    profile_picture: Optional[HttpUrl] = None  
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))  # Timezone-aware datetime
+    profile_picture: Optional[HttpUrl] = None
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )  # Timezone-aware datetime
 
 
 class UserResponse(ModelConfig):
@@ -41,5 +43,10 @@ class UserResponse(ModelConfig):
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
     email: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
