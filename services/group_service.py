@@ -6,20 +6,18 @@ from services.user_service import check_permissions
 async def create_group(
     db, group_data, role: str = Depends(check_permissions(["Admin"]))
 ):
-    group_id = str(ObjectId())
-
     existing_group = await db["groups"].find_one({"name": group_data.name})
     if existing_group:
         raise HTTPException(status_code=400, detail="Group name already exists")
 
     group_object = {
-        "_id": ObjectId(group_id),
         "name": group_data.name,
         "description": group_data.description,
-        "members": group_data.members if group_data.members is not None else [],
+        "members": group_data.members or [],
     }
 
-    await db["groups"].insert_one(group_object)
+    result = await db["groups"].insert_one(group_object)
+    group_object["_id"] = result.inserted_id
 
     return group_object
 

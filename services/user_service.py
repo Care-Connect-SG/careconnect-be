@@ -5,7 +5,7 @@ from bson import ObjectId
 from models.user import UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
@@ -117,6 +117,16 @@ async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse
     return UserResponse(**user)
 
 
+# Get User by Email
+async def get_user_by_email_service(
+    db: AsyncIOMotorDatabase, email: str
+) -> Optional[UserResponse]:
+    user = await db["users"].find_one({"email": email})
+    if user:
+        return UserResponse(**user)
+    return None
+
+
 # Update User (Update)
 async def update_user(
     db: AsyncIOMotorDatabase, user_id: str, user_data: dict
@@ -160,15 +170,3 @@ async def get_all_users(
     async for user in users_cursor:
         users.append(UserResponse(**user))
     return users
-
-
-async def get_user_by_email_service(db: AsyncIOMotorDatabase, email: str) -> dict:
-    """
-    Query the database for a user by email.
-    """
-    user = await db["users"].find_one({"email": email})
-    if user:
-        # Convert ObjectId to string
-        user["_id"] = str(user["_id"])
-        return user
-    return None

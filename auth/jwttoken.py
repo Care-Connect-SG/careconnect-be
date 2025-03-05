@@ -23,9 +23,6 @@ def create_refresh_token(data: dict):
 
 
 def refresh_access_token(refresh_token: str) -> dict:
-    """
-    Verifies the provided refresh token and generates a new access token.
-    """
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("id")
