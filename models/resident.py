@@ -26,7 +26,7 @@ class RegistrationResponse(ModelConfig):
     nric_number: str
     emergency_contact_name: str
     emergency_contact_number: str
-    relationship: str
+    relationship: str 
     room_number: str
     admission_date: date
     additional_notes: Optional[str] = None

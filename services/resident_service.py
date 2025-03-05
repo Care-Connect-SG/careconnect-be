@@ -1,9 +1,9 @@
 import datetime
 import random
 from fastapi import HTTPException
-from models.resident import RegistrationCreate
+from models.resident import RegistrationCreate, RegistrationResponse
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
 
 
 async def create_residentInfo(db, registration_data: RegistrationCreate):
@@ -146,3 +146,19 @@ async def delete_resident(db, resident_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Resident not found")
 
     return {"message": "Resident record deleted successfully"}
+
+async def get_all_residents_by_nurse(db, nurse: Optional[str]) -> List[RegistrationResponse]:
+    query = {}
+    if nurse:
+        # Since primary_nurse is a string field, we can compare directly.
+        query["primary_nurse"] = nurse
+
+    cursor = db["resident_info"].find(query)
+    residents = []
+    async for record in cursor:
+        # Convert the Mongo _id to a string if necessary.
+        record["_id"] = str(record["_id"])
+        # Parse the record into your Pydantic model.
+        resident_obj = RegistrationResponse.parse_obj(record)
+        residents.append(resident_obj)
+    return residents
