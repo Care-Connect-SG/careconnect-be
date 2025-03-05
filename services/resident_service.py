@@ -102,3 +102,19 @@ async def delete_resident(db, resident_id: str) -> dict:
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Resident not found")
     return {"message": "Resident record deleted successfully"}
+
+
+async def get_resident_full_name(db, resident_id: str) -> str:
+    user = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"full_name": 1}
+    )
+    return user["full_name"] if user and "full_name" in user else "Unknown"
+
+
+async def get_resident_room(db, resident_id: str) -> str:
+    resident = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"room_number": 1}
+    )
+    return (
+        resident["room_number"] if resident and "room_number" in resident else "Unknown"
+    )

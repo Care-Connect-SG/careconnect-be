@@ -68,5 +68,8 @@ class TaskResponse(ModelConfig):
     is_ai_generated: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     assigned_to: PyObjectId
+    assigned_to_name: str = "Unknown"
     resident: PyObjectId
+    resident_name: str = "Unknown"
+    resident_room: str = "Unknown"
     created_by: PyObjectId
