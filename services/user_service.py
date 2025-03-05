@@ -56,7 +56,10 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
 
-    access_token = create_access_token(data={"sub": user["email"]})
+    access_token = create_access_token(
+        data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
+    )
+
     return {
         "access_token": access_token,
         "token_type": "bearer",

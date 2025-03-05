@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from db.connection import get_db
 from models.user import UserCreate, UserResponse, Token
 from services.user_service import (
+    get_user_role,
     register_user,
     login_user,
     get_user_by_id,
@@ -68,3 +69,11 @@ async def update_user_details(
 @limiter.limit("10/minute")
 async def delete_user_by_id(request: Request, user_id: str, db=Depends(get_db)):
     await delete_user(db, user_id)
+
+
+@router.get("/me/role")
+@limiter.limit("10/minute")
+async def get_current_user_role(request: Request, role: str = Depends(get_user_role)):
+    return {"role": role}
+
+
