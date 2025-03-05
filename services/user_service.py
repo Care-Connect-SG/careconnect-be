@@ -116,7 +116,6 @@ async def get_all_users(
     if role:
         filters["role"] = role
     if email:
-        print("email: ", email)
         filters["email"] = email
 
     users_cursor = db["users"].find(filters)
