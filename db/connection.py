@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from contextlib import asynccontextmanager
 from motor.motor_asyncio import AsyncIOMotorClient
-from config import MONGO_URI
+from utils.config import MONGO_URI
 
 # db = None
 
