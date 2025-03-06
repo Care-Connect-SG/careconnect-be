@@ -43,9 +43,16 @@ async def get_tasks(
     if category:
         filters["category"] = category
 
+    now = datetime.now(timezone.utc)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
+
     tasks = await db.tasks.find(filters).to_list(length=100)
     enriched_tasks = []
     for task in tasks:
+        task = await update_if_overdue(db, task)
         task = await enrich_task_with_names(db, task)
         enriched_tasks.append(TaskResponse(**task))
     return enriched_tasks
@@ -55,6 +62,7 @@ async def get_tasks(
 async def get_task_by_id(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
     task = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if task:
+        task = await update_if_overdue(db, task)
         task = await enrich_task_with_names(db, task)
         task = await enrich_task_with_room(db, task)
         return TaskResponse(**task)
@@ -102,6 +110,8 @@ async def search_tasks(
         if v
     }
     tasks = await db.tasks.find(filters).to_list(length=100)
+    for task in tasks:
+        task = await update_if_overdue(db, task)
     return [TaskResponse(**task) for task in tasks]
 
 
@@ -119,6 +129,22 @@ async def update_task_status(
         updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
         return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
+
+
+# Update Task Status to Delayed if Overdue
+async def update_if_overdue(db, task: dict) -> dict:
+    if task.get("due_date") and task.get("status") != TaskStatus.COMPLETED:
+        now = datetime.now(timezone.utc)
+        due_date = task["due_date"]
+        # If due_date is naive (no tzinfo), assume it is UTC and attach timezone info
+        if due_date.tzinfo is None:
+            due_date = due_date.replace(tzinfo=timezone.utc)
+        if now > due_date:
+            await db.tasks.update_one(
+                {"_id": task["_id"]}, {"$set": {"status": TaskStatus.DELAYED}}
+            )
+            task["status"] = TaskStatus.DELAYED
+    return task
 
 
 # Reassign Task
