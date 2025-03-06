@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Optional, List
 from enum import Enum
 from models.base import ModelConfig, PyObjectId
@@ -44,7 +44,7 @@ class TaskCreate(BaseModel):
     start_date: datetime
     due_date: datetime
     recurring: Optional[Recurrence] = None
-    end_recurring_date: Optional[datetime] = None
+    end_recurring_date: Optional[date] = None
     remind_prior: Optional[int] = None
     is_ai_generated: bool = False
     assigned_to: PyObjectId
@@ -62,7 +62,7 @@ class TaskResponse(ModelConfig):
     start_date: datetime
     due_date: datetime
     recurring: Optional[Recurrence] = None
-    end_recurring_date: Optional[datetime] = None
+    end_recurring_date: Optional[date] = None
     remind_prior: Optional[int] = None
     finished_at: Optional[datetime] = None
     is_ai_generated: bool = False
