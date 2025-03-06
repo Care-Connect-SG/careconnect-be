@@ -2,7 +2,7 @@ import datetime
 import random
 from fastapi import HTTPException
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
 
 from models.resident import RegistrationCreate, RegistrationResponse
 
@@ -102,6 +102,20 @@ async def delete_resident(db, resident_id: str) -> dict:
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Resident not found")
     return {"message": "Resident record deleted successfully"}
+
+
+async def get_all_residents_by_nurse(
+    db, nurse: Optional[str]
+) -> List[RegistrationResponse]:
+    query = {}
+    if nurse:
+        query["primary_nurse"] = nurse
+
+    cursor = db["resident_info"].find(query)
+    residents = []
+    async for record in cursor:
+        residents.append(RegistrationResponse(**record))
+    return residents
 
 
 async def get_resident_full_name(db, resident_id: str) -> str:
