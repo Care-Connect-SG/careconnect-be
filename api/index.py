@@ -6,6 +6,7 @@ from routers.group import router as group_router
 from routers.task import router as task_router
 from routers.resident import router as resident_router
 from routers.medication import router as medication_router
+from routers.careplan import router as careplan_router
 from routers.incident.form import router as form_router
 from db.connection import lifespan
 from utils.config import FE_URL
@@ -29,6 +30,7 @@ app.include_router(task_router)
 app.include_router(resident_router)
 app.include_router(medication_router)
 app.include_router(form_router)
+app.include_router(careplan_router)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
