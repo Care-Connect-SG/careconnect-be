@@ -96,7 +96,7 @@ async def fetch_task_by_id(
 @router.put(
     "/{task_id}",
     summary="Update a task completely",
-    response_model=TaskResponse,
+    response_model=TaskResponse, 
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
@@ -108,7 +108,6 @@ async def modify_task(
 ):
     updated_task = await update_task(db, task_id, task)
     return updated_task
-
 
 @router.delete(
     "/{task_id}", summary="Delete a task", status_code=status.HTTP_204_NO_CONTENT

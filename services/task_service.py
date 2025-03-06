@@ -74,13 +74,25 @@ async def update_task(
     db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskCreate
 ) -> TaskResponse:
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
+
+    # Ensure MongoDB updates correctly
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
-    if result.modified_count:
-        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
-        return TaskResponse(**updated_task_doc)
-    raise HTTPException(status_code=404, detail="Task not found")
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="No changes detected in update")
+
+    # Retrieve the updated document and return
+    updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not updated_task_doc:
+        raise HTTPException(status_code=500, detail="Failed to retrieve updated task")
+
+    return TaskResponse(**updated_task_doc)
+
 
 
 # Delete Task
@@ -173,7 +185,6 @@ async def complete_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
         updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
         return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
-
 
 # Enrich Task with Names
 async def enrich_task_with_names(db, task: dict) -> dict:
