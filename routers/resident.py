@@ -33,7 +33,6 @@ async def list_residents(
     db=Depends(get_db),
     nurse: Optional[str] = None,  # e.g. /residents?nurse=Alice
 ):
-
     if nurse:
         return await get_all_residents_by_nurse(db, nurse)
     else:

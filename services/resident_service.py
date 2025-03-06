@@ -109,15 +109,26 @@ async def get_all_residents_by_nurse(
 ) -> List[RegistrationResponse]:
     query = {}
     if nurse:
-        # Since primary_nurse is a string field, we can compare directly.
         query["primary_nurse"] = nurse
 
     cursor = db["resident_info"].find(query)
     residents = []
     async for record in cursor:
-        # Convert the Mongo _id to a string if necessary.
-        record["_id"] = str(record["_id"])
-        # Parse the record into your Pydantic model.
-        resident_obj = RegistrationResponse.parse_obj(record)
-        residents.append(resident_obj)
+        residents.append(RegistrationResponse(**record))
     return residents
+
+
+async def get_resident_full_name(db, resident_id: str) -> str:
+    user = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"full_name": 1}
+    )
+    return user["full_name"] if user and "full_name" in user else "Unknown"
+
+
+async def get_resident_room(db, resident_id: str) -> str:
+    resident = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"room_number": 1}
+    )
+    return (
+        resident["room_number"] if resident and "room_number" in resident else "Unknown"
+    )
