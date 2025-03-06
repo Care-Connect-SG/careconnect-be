@@ -1,13 +1,42 @@
 from fastapi import HTTPException, status, Depends
 from auth.hashing import Hash
-from auth.jwttoken import create_access_token, verify_token
+from auth.jwttoken import create_access_token, create_refresh_token, verify_token
 from bson import ObjectId
 from models.user import CaregiverTagResponse, UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
-from typing import List, Optional
+from typing import List, Dict, Optional
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
+
+
+def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict:
+    """
+    Decodes and verifies the JWT token, returning the full user payload.
+    Expects the token payload to include at least "id", "sub", and "role".
+    """
+    return verify_token(
+        token,
+        credentials_exception=HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        ),
+    )
+
+
+def require_roles(required_roles: List[str]):
+    """
+    Dependency that ensures the user has one of the required roles.
+    Returns the full user payload if the check passes.
+    """
+
+    def dependency(user: Dict = Depends(get_current_user)) -> Dict:
+        if user.get("role") not in required_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+        return user
+
+    return dependency
 
 
 def get_user_role(token: str = Depends(oauth2_scheme)):
@@ -37,7 +66,9 @@ def check_permissions(required_roles: list):
 async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserResponse:
     existing_user = await db["users"].find_one({"email": user.email})
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already exists")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
+        )
 
     hashed_pass = Hash.bcrypt(user.password)
     user_dict = user.model_dump(exclude_none=True)
@@ -59,11 +90,16 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
     access_token = create_access_token(
         data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
     )
+    refresh_token = create_refresh_token(
+        data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
+    )
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "email": user["email"],
+        "name": user["name"],
     }
 
 
@@ -79,6 +115,16 @@ async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse
         raise HTTPException(status_code=404, detail="User not found")
 
     return UserResponse(**user)
+
+
+# Get User by Email
+async def get_user_by_email_service(
+    db: AsyncIOMotorDatabase, email: str
+) -> Optional[UserResponse]:
+    user = await db["users"].find_one({"email": email})
+    if user:
+        return UserResponse(**user)
+    return None
 
 
 # Update User (Update)
@@ -141,3 +187,9 @@ async def get_caregiver_tags(search_key: str, limit: int, db) -> List[CaregiverT
         del record["_id"]
         caregivers.append(record)
     return caregivers
+
+
+# Get Assigned To Name
+async def get_assigned_to_name(db, assigned_to_id: str) -> str:
+    user = await db.users.find_one({"_id": ObjectId(assigned_to_id)}, {"name": 1})
+    return user["name"] if user and "name" in user else "Unknown"

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from fastapi import HTTPException
 from models.form import FormCreate, FormResponse
@@ -12,7 +12,7 @@ from bson import ObjectId
 
 async def create_form(form: FormCreate, db) -> str:
     form_data = form.model_dump()
-    form_data["created_date"] = str(datetime.now())
+    form_data["created_at"] = datetime.now(timezone.utc)
     result = await db["forms"].insert_one(form_data)
     return str(result.inserted_id)
 
@@ -37,7 +37,7 @@ async def get_form_by_id(form_id: str, db):
     form_data = await db["forms"].find_one({"_id": object_id})
     if not form_data:
         raise HTTPException(status_code=404, detail="Form not found")
-    return form_data
+    return FormResponse(**form_data)
 
 
 async def update_form_fields(form_id: str, form: FormCreate, db) -> str:

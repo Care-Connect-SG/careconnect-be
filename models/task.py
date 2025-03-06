@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import datetime, date
+from datetime import datetime, timezone, date
 from typing import Optional, List
 from enum import Enum
 from models.base import ModelConfig, PyObjectId
@@ -35,41 +35,41 @@ class Recurrence(str, Enum):
 class TaskCreate(BaseModel):
     task_title: str = Field(..., min_length=3, max_length=255)
     task_details: Optional[str] = None
+    media: Optional[List[str]] = None
+    notes: Optional[str] = None
     status: TaskStatus = TaskStatus.ASSIGNED
     priority: Optional[TaskPriority] = None
     category: Optional[TaskCategory] = None
-    assigned_to: List[str] = []
-    resident: str
-    created_by: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
+    residents: List[PyObjectId]
+    start_date: datetime
+    due_date: datetime
     recurring: Optional[Recurrence] = None
     end_recurring_date: Optional[date] = None
     remind_prior: Optional[int] = None
-    finished_at: Optional[datetime] = None
-    media: Optional[List[str]] = None
-    notes: Optional[str] = None
     is_ai_generated: bool = False
+    assigned_to: PyObjectId
 
 
 class TaskResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     task_title: str = Field(..., min_length=3, max_length=255)
     task_details: Optional[str] = None
+    media: Optional[List[str]] = None
+    notes: Optional[str] = None
     status: TaskStatus = TaskStatus.ASSIGNED
     priority: Optional[TaskPriority] = None
     category: Optional[TaskCategory] = None
-    assigned_to: List[str] = []
-    resident: str
-    created_by: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    start_date: Optional[date] = None
-    due_date: Optional[date] = None
+    start_date: datetime
+    due_date: datetime
     recurring: Optional[Recurrence] = None
     end_recurring_date: Optional[date] = None
     remind_prior: Optional[int] = None
     finished_at: Optional[datetime] = None
-    media: Optional[List[str]] = None
-    notes: Optional[str] = None
     is_ai_generated: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    assigned_to: PyObjectId
+    assigned_to_name: str = "Unknown"
+    resident: PyObjectId
+    resident_name: str = "Unknown"
+    resident_room: str = "Unknown"
+    created_by: PyObjectId

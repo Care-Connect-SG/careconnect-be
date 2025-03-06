@@ -11,15 +11,10 @@ from routers.incident.report import router as report_router
 from routers.tag import router as tag_router
 from db.connection import lifespan
 from utils.config import FE_URL
-# from utils.bearer import verify_bearer_token
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 app = FastAPI(root_path="/api/v1", lifespan=lifespan)
-# app = FastAPI(
-#     root_path="/api/v1", lifespan=lifespan, dependencies=[Depends(verify_bearer_token)]
-# )
-# app = FastAPI(root_path="/api/v1")
 
 app.add_middleware(
     CORSMiddleware,

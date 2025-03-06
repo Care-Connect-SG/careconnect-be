@@ -3,10 +3,14 @@ import random
 from fastapi import HTTPException
 from models.resident import RegistrationCreate, ResidentTagResponse
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
+
+from models.resident import RegistrationCreate, RegistrationResponse
 
 
-async def create_residentInfo(db, registration_data: RegistrationCreate):
+async def create_residentInfo(
+    db, registration_data: RegistrationCreate
+) -> RegistrationResponse:
     existing = await db["resident_info"].find_one(
         {"nric_number": registration_data.nric_number}
     )
@@ -30,46 +34,40 @@ async def create_residentInfo(db, registration_data: RegistrationCreate):
         today_date, datetime.time.min
     )
     registration_dict["room_number"] = room_number
+
     result = await db["resident_info"].insert_one(registration_dict)
     new_record = await db["resident_info"].find_one({"_id": result.inserted_id})
-    new_record["_id"] = str(new_record["_id"])
-    return new_record
+    return RegistrationResponse(**new_record)
 
 
-async def get_all_residents(db) -> List[dict]:
+async def get_all_residents(db) -> List[RegistrationResponse]:
     residents = []
     cursor = db["resident_info"].find()
     async for record in cursor:
-        record["id"] = str(record["_id"])
-        del record["_id"]
-        residents.append(record)
+        residents.append(RegistrationResponse(**record))
     return residents
 
 
-async def get_residents_by_name(db, name: str) -> List[dict]:
+async def get_residents_by_name(db, name: str) -> List[RegistrationResponse]:
     residents = []
     cursor = db["resident_info"].find({"full_name": {"$regex": name, "$options": "i"}})
     async for record in cursor:
-        record["id"] = str(record["_id"])
-        del record["_id"]
-        residents.append(record)
+        residents.append(RegistrationResponse(**record))
     return residents
 
 
-async def get_resident_by_id(db, resident_id: str) -> dict:
+async def get_resident_by_id(db, resident_id: str) -> RegistrationResponse:
     if not ObjectId.is_valid(resident_id):
         raise HTTPException(status_code=400, detail="Invalid resident ID")
     record = await db["resident_info"].find_one({"_id": ObjectId(resident_id)})
     if not record:
         raise HTTPException(status_code=404, detail="Resident not found")
-    record["id"] = str(record["_id"])
-    del record["_id"]
-    return record
+    return RegistrationResponse(**record)
 
 
 async def update_resident(
     db, resident_id: str, update_data: RegistrationCreate
-) -> dict:
+) -> RegistrationResponse:
     if not ObjectId.is_valid(resident_id):
         raise HTTPException(status_code=400, detail="Invalid resident ID")
     update_dict = update_data.dict()
@@ -78,6 +76,12 @@ async def update_resident(
     ):
         update_dict["date_of_birth"] = datetime.datetime.combine(
             update_dict["date_of_birth"], datetime.time.min
+        )
+    if "additional_notes_timestamp" in update_dict and isinstance(
+        update_dict.get("additional_notes_timestamp"), datetime.date
+    ):
+        update_dict["additional_notes_timestamp"] = datetime.datetime.combine(
+            update_dict["additional_notes_timestamp"], datetime.time.min
         )
     result = await db["resident_info"].update_one(
         {"_id": ObjectId(resident_id)}, {"$set": update_dict}
@@ -89,9 +93,7 @@ async def update_resident(
     updated_record = await db["resident_info"].find_one({"_id": ObjectId(resident_id)})
     if not updated_record:
         raise HTTPException(status_code=404, detail="Resident not found")
-    updated_record["id"] = str(updated_record["_id"])
-    del updated_record["_id"]
-    return updated_record
+    return RegistrationResponse(**updated_record)
 
 
 async def delete_resident(db, resident_id: str) -> dict:
@@ -116,3 +118,33 @@ async def get_resident_tags(search_key: str, limit, db) -> List[ResidentTagRespo
         record["name"] = record["full_name"]
         residents.append(record)
     return residents 
+
+
+async def get_all_residents_by_nurse(
+    db, nurse: Optional[str]
+) -> List[RegistrationResponse]:
+    query = {}
+    if nurse:
+        query["primary_nurse"] = nurse
+
+    cursor = db["resident_info"].find(query)
+    residents = []
+    async for record in cursor:
+        residents.append(RegistrationResponse(**record))
+    return residents
+
+
+async def get_resident_full_name(db, resident_id: str) -> str:
+    user = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"full_name": 1}
+    )
+    return user["full_name"] if user and "full_name" in user else "Unknown"
+
+
+async def get_resident_room(db, resident_id: str) -> str:
+    resident = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"room_number": 1}
+    )
+    return (
+        resident["room_number"] if resident and "room_number" in resident else "Unknown"
+    )
