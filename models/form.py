@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
-from models.base import PyObjectId
+from models.base import PyObjectId, ModelConfig
 
 
 class FormElement(BaseModel):
@@ -22,6 +22,6 @@ class FormCreate(BaseModel):
     status: str
 
 
-class FormResponse(FormCreate):
+class FormResponse(FormCreate, ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    created_at: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
