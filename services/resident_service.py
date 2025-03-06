@@ -103,7 +103,10 @@ async def delete_resident(db, resident_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Resident not found")
     return {"message": "Resident record deleted successfully"}
 
-async def get_all_residents_by_nurse(db, nurse: Optional[str]) -> List[RegistrationResponse]:
+
+async def get_all_residents_by_nurse(
+    db, nurse: Optional[str]
+) -> List[RegistrationResponse]:
     query = {}
     if nurse:
         # Since primary_nurse is a string field, we can compare directly.
