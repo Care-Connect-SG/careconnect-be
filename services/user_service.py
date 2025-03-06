@@ -170,3 +170,9 @@ async def get_all_users(
     async for user in users_cursor:
         users.append(UserResponse(**user))
     return users
+
+
+# Get Assigned To Name
+async def get_assigned_to_name(db, assigned_to_id: str) -> str:
+    user = await db.users.find_one({"_id": ObjectId(assigned_to_id)}, {"name": 1})
+    return user["name"] if user and "name" in user else "Unknown"

@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter, Request, status
+from fastapi import Depends, APIRouter, Request, status, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
 from models.task import TaskResponse, TaskCreate, TaskStatus
@@ -14,7 +14,7 @@ from services.task_service import (
     complete_task,
 )
 from utils.limiter import limiter
-from services.user_service import require_roles
+from services.user_service import require_roles, get_current_user
 from typing import Optional, List
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -42,15 +42,18 @@ async def search_for_tasks(
 @router.post(
     "/",
     summary="Create a new task",
-    response_model=TaskResponse,
+    response_model=List[TaskResponse],
     status_code=status.HTTP_201_CREATED,
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
 async def create_new_task(
-    request: Request, task: TaskCreate, db: AsyncIOMotorDatabase = Depends(get_db)
+    request: Request,
+    task: TaskCreate,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
-    new_task = await create_task(db, task)
+    new_task = await create_task(db, task, current_user)
     return new_task
 
 
@@ -72,7 +75,6 @@ async def fetch_tasks(
 ):
     if user.get("role") != "Admin":
         assigned_to = user.get("id")
-
     tasks = await get_tasks(db, assigned_to, status_filter, priority, category)
     return tasks
 
@@ -137,7 +139,10 @@ async def modify_task_status(
 
 
 @router.patch(
-    "/{task_id}/reassign", summary="Reassign a task", response_model=TaskResponse
+    "/{task_id}/reassign",
+    summary="Reassign a task",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
 async def modify_task_assignment(
