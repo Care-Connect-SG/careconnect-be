@@ -46,5 +46,11 @@ class Token(BaseModel):
     email: str
 
 
+class CaregiverTagResponse(BaseModel):
+    id: str
+    name: str
+    role: str
+
+    
 class RefreshTokenRequest(BaseModel):
     refresh_token: str

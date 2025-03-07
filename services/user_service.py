@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, Depends
 from auth.hashing import Hash
 from auth.jwttoken import create_access_token, create_refresh_token, verify_token
 from bson import ObjectId
-from models.user import UserResponse, UserCreate
+from models.user import CaregiverTagResponse, UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
 from typing import List, Dict, Optional
@@ -155,7 +155,7 @@ async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
 
 # Get All Users (with optional filters)
 async def get_all_users(
-    db: AsyncIOMotorDatabase, name=None, status=None, role=None
+    db: AsyncIOMotorDatabase, name=None, status=None, role=None, email:Optional[str]=None
 ) -> List[UserResponse]:
     filters = {}
     if name:
@@ -164,12 +164,29 @@ async def get_all_users(
         filters["status"] = status
     if role:
         filters["role"] = role
+    if email:
+        filters["email"] = email
 
     users_cursor = db["users"].find(filters)
     users = []
     async for user in users_cursor:
         users.append(UserResponse(**user))
     return users
+
+
+# Search for caregiver by name - for use in report tagging
+async def get_caregiver_tags(search_key: str, limit: int, db) -> List[CaregiverTagResponse]:
+    if search_key:
+        cursor = db["users"].find({"name": {"$regex": search_key, "$options": "i"}}, {"_id": 1, "name": 1, "role": 1}).limit(limit)
+    else:
+        cursor = db["users"].find()
+
+    caregivers = []
+    async for record in cursor:
+        record["id"] = str(record["_id"])
+        del record["_id"]
+        caregivers.append(record)
+    return caregivers
 
 
 # Get Assigned To Name
