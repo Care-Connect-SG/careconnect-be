@@ -32,6 +32,7 @@ async def get_tasks(
     status: str = None,
     priority: str = None,
     category: str = None,
+    search: str = None,
 ) -> List[TaskResponse]:
     filters = {}
     if assigned_to:
@@ -42,11 +43,16 @@ async def get_tasks(
         filters["priority"] = priority
     if category:
         filters["category"] = category
+    if search:
+        filters["$or"] = [
+            {"task_detail": {"$regex": search, "$options": "i"}},
+            {"task_details": {"$regex": search, "$options": "i"}},
+        ]
 
+    # Currently it restricts results to tasks due today.
     now = datetime.now(timezone.utc)
     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-
     filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
 
     tasks = await db.tasks.find(filters).to_list(length=100)
@@ -82,7 +88,7 @@ async def update_task(
 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="No changes detected in update")
 
@@ -94,52 +100,11 @@ async def update_task(
     return TaskResponse(**updated_task_doc)
 
 
-
 # Delete Task
 async def delete_task(db: AsyncIOMotorDatabase, task_id: str) -> dict:
     result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
     if result.deleted_count:
         return {"message": "Task deleted successfully"}
-    raise HTTPException(status_code=404, detail="Task not found")
-
-
-# Search Tasks
-async def search_tasks(
-    db: AsyncIOMotorDatabase,
-    status: str = None,
-    priority: str = None,
-    category: str = None,
-    assigned_to: str = None,
-) -> List[TaskResponse]:
-    filters = {
-        k: v
-        for k, v in {
-            "status": status,
-            "priority": priority,
-            "category": category,
-            "assigned_to": assigned_to,
-        }.items()
-        if v
-    }
-    tasks = await db.tasks.find(filters).to_list(length=100)
-    for task in tasks:
-        task = await update_if_overdue(db, task)
-    return [TaskResponse(**task) for task in tasks]
-
-
-# Update Task Status
-async def update_task_status(
-    db: AsyncIOMotorDatabase, task_id: str, new_status: TaskStatus
-) -> TaskResponse:
-    update_data = {
-        "status": new_status,
-    }
-    result = await db.tasks.update_one(
-        {"_id": ObjectId(task_id)}, {"$set": update_data}
-    )
-    if result.modified_count:
-        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
-        return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
 
 
@@ -185,6 +150,33 @@ async def complete_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
         updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
         return TaskResponse(**updated_task_doc)
     raise HTTPException(status_code=404, detail="Task not found")
+
+
+# Reopen Task
+async def reopen_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
+    task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not task_doc:
+        raise HTTPException(status_code=404, detail="Task not found")
+    new_status = TaskStatus.ASSIGNED
+    due_date = task_doc.get("due_date")
+    if due_date:
+        now = datetime.now(timezone.utc)
+        if due_date.tzinfo is None:
+            due_date = due_date.replace(tzinfo=timezone.utc)
+        if now > due_date:
+            new_status = TaskStatus.DELAYED
+    update_data = {
+        "status": new_status,
+        "finished_at": None,
+    }
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
+    )
+    if result.modified_count:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+        return TaskResponse(**updated_task_doc)
+    raise HTTPException(status_code=404, detail="Task not found")
+
 
 # Enrich Task with Names
 async def enrich_task_with_names(db, task: dict) -> dict:
