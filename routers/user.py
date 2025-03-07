@@ -43,7 +43,7 @@ async def login(
 
 @router.get("/", response_model=List[UserResponse], response_model_by_alias=False)
 @limiter.limit("100/minute")
-async def get_users(request: Request, email:Optional[str]=None, db=Depends(get_db)):
+async def get_users(request: Request, email: Optional[str] = None, db=Depends(get_db)):
     users = await get_all_users(email=email, db=db)
     return users
 

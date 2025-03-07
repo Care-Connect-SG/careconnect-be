@@ -107,7 +107,14 @@ async def delete_resident(db, resident_id: str) -> dict:
 
 async def get_resident_tags(search_key: str, limit, db) -> List[ResidentTagResponse]:
     if search_key:
-        cursor = db["resident_info"].find({"full_name": {"$regex": search_key, "$options": "i"}}, {"_id": 1, "full_name": 1}).limit(limit)
+        cursor = (
+            db["resident_info"]
+            .find(
+                {"full_name": {"$regex": search_key, "$options": "i"}},
+                {"_id": 1, "full_name": 1},
+            )
+            .limit(limit)
+        )
     else:
         cursor = db["resident_info"].find()
 
@@ -117,7 +124,7 @@ async def get_resident_tags(search_key: str, limit, db) -> List[ResidentTagRespo
         del record["_id"]
         record["name"] = record["full_name"]
         residents.append(record)
-    return residents 
+    return residents
 
 
 async def get_all_residents_by_nurse(

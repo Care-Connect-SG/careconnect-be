@@ -155,7 +155,11 @@ async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
 
 # Get All Users (with optional filters)
 async def get_all_users(
-    db: AsyncIOMotorDatabase, name=None, status=None, role=None, email:Optional[str]=None
+    db: AsyncIOMotorDatabase,
+    name=None,
+    status=None,
+    role=None,
+    email: Optional[str] = None,
 ) -> List[UserResponse]:
     filters = {}
     if name:
@@ -175,9 +179,18 @@ async def get_all_users(
 
 
 # Search for caregiver by name - for use in report tagging
-async def get_caregiver_tags(search_key: str, limit: int, db) -> List[CaregiverTagResponse]:
+async def get_caregiver_tags(
+    search_key: str, limit: int, db
+) -> List[CaregiverTagResponse]:
     if search_key:
-        cursor = db["users"].find({"name": {"$regex": search_key, "$options": "i"}}, {"_id": 1, "name": 1, "role": 1}).limit(limit)
+        cursor = (
+            db["users"]
+            .find(
+                {"name": {"$regex": search_key, "$options": "i"}},
+                {"_id": 1, "name": 1, "role": 1},
+            )
+            .limit(limit)
+        )
     else:
         cursor = db["users"].find()
 
