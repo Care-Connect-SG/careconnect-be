@@ -32,3 +32,7 @@ class RegistrationResponse(ModelConfig):
     additional_notes: Optional[str] = None
     additional_notes_timestamp: Optional[date] = None
     primary_nurse: Optional[str] = None
+
+class ResidentTagResponse(BaseModel):
+    id: str
+    name: str

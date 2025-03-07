@@ -4,11 +4,11 @@ from fastapi import HTTPException
 from models.form import FormCreate, FormResponse
 from bson import ObjectId
 
+
 # to-dos
 # - (must) add user role/access validation once rbac is implemented
 # - (optional) add in pytest
 # - (optional) abstract out form_id validation
-
 
 async def create_form(form: FormCreate, db) -> str:
     form_data = form.model_dump()
@@ -17,8 +17,14 @@ async def create_form(form: FormCreate, db) -> str:
     return str(result.inserted_id)
 
 
-async def get_forms(db) -> List[FormResponse]:
-    forms = await db["forms"].find().to_list(100)
+async def get_forms(status: str, db) -> List[FormResponse]:
+    query = {}
+    if status:
+        query["status"] = status
+    cursor = db["forms"].find(query)
+    forms = []
+    async for form in cursor:
+        forms.append(form)
     return [FormResponse(**form) for form in forms]
 
 
