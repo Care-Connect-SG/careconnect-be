@@ -25,7 +25,7 @@ async def get_reports(status: str, db) -> List[ReportResponse]:
 
 async def get_report_by_id(report_id: str, db) -> ReportResponse:
     try:
-        object_id = ObjectId(report_id) 
+        object_id = ObjectId(report_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid report ID format")
 
@@ -41,7 +41,7 @@ async def update_report(report_id: str, report: ReportCreate, db) -> str:
         object_id = ObjectId(report_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid report ID")
-    
+
     report_data = await db["reports"].find_one({"_id": object_id})
     print("report data: ", report_data)
     if not report_data:
@@ -49,7 +49,7 @@ async def update_report(report_id: str, report: ReportCreate, db) -> str:
 
     if report_data.get("status") == "Published":
         raise HTTPException(status_code=400, detail="Cannot modify a published report")
-    
+
     update_data = report.model_dump(exclude_unset=True)
     await db["reports"].update_one({"_id": object_id}, {"$set": update_data})
     return report_id
@@ -62,6 +62,3 @@ async def remove_report(report_id: str, db):
             raise HTTPException(status_code=404, detail="Report not found")
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid report ID")
-
-
-
