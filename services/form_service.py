@@ -1,26 +1,30 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 from fastapi import HTTPException
 from models.form import FormCreate, FormResponse
 from bson import ObjectId
+
 
 # to-dos
 # - (must) add user role/access validation once rbac is implemented
 # - (optional) add in pytest
 # - (optional) abstract out form_id validation
 
-
 async def create_form(form: FormCreate, db) -> str:
     form_data = form.model_dump()
-    form_data["created_date"] = str(datetime.now())
-    form_data["_id"] = ObjectId()
+    form_data["created_at"] = datetime.now(timezone.utc)
     result = await db["forms"].insert_one(form_data)
-    print("inserted_id: ", result.inserted_id)
     return str(result.inserted_id)
 
 
-async def get_forms(db) -> List[FormResponse]:
-    forms = await db["forms"].find().to_list(100)
+async def get_forms(status: str, db) -> List[FormResponse]:
+    query = {}
+    if status:
+        query["status"] = status
+    cursor = db["forms"].find(query)
+    forms = []
+    async for form in cursor:
+        forms.append(form)
     return [FormResponse(**form) for form in forms]
 
 
@@ -33,8 +37,7 @@ async def get_form_by_id(form_id: str, db):
     form_data = await db["forms"].find_one({"_id": object_id})
     if not form_data:
         raise HTTPException(status_code=404, detail="Form not found")
-    form_data["_id"] = str(form_data["_id"])
-    return form_data
+    return FormResponse(**form_data)
 
 
 async def update_form_fields(form_id: str, form: FormCreate, db) -> str:

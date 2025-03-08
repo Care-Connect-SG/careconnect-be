@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Query
 from models.resident import RegistrationCreate, RegistrationResponse
-from typing import List
+from typing import List, Optional
 from services.resident_service import (
     create_residentInfo,
     get_all_residents,
@@ -8,6 +8,7 @@ from services.resident_service import (
     get_resident_by_id,
     update_resident,
     delete_resident,
+    get_all_residents_by_nurse,
 )
 from db.connection import get_db
 from utils.limiter import limiter
@@ -27,8 +28,15 @@ async def create_resident_record(
     "/", response_model=List[RegistrationResponse], response_model_by_alias=False
 )
 @limiter.limit("100/minute")
-async def view_all_residents(request: Request, db=Depends(get_db)):
-    return await get_all_residents(db)
+async def list_residents(
+    request: Request,
+    db=Depends(get_db),
+    nurse: Optional[str] = None,  # e.g. /residents?nurse=Alice
+):
+    if nurse:
+        return await get_all_residents_by_nurse(db, nurse)
+    else:
+        return await get_all_residents(db)
 
 
 @router.get(

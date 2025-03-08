@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, Request
 from db.connection import get_db
 from models.form import FormCreate, FormResponse
@@ -28,8 +28,8 @@ async def create_new_form(request: Request, form: FormCreate, db=Depends(get_db)
     response_model_by_alias=False,
 )
 @limiter.limit("100/minute")
-async def list_forms(request: Request, db=Depends(get_db)):
-    return await get_forms(db)
+async def list_forms(request: Request, status: Optional[str] = None, db=Depends(get_db)):
+    return await get_forms(status, db)
 
 
 @router.get(

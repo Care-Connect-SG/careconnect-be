@@ -1,8 +1,9 @@
 import datetime
 import random
 from fastapi import HTTPException
+from models.resident import RegistrationCreate, ResidentTagResponse
 from bson import ObjectId
-from typing import List
+from typing import List, Optional
 
 from models.resident import RegistrationCreate, RegistrationResponse
 
@@ -102,3 +103,48 @@ async def delete_resident(db, resident_id: str) -> dict:
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Resident not found")
     return {"message": "Resident record deleted successfully"}
+
+
+async def get_resident_tags(search_key: str, limit, db) -> List[ResidentTagResponse]:
+    if search_key:
+        cursor = db["resident_info"].find({"full_name": {"$regex": search_key, "$options": "i"}}, {"_id": 1, "full_name": 1}).limit(limit)
+    else:
+        cursor = db["resident_info"].find()
+
+    residents = []
+    async for record in cursor:
+        record["id"] = str(record["_id"])
+        del record["_id"]
+        record["name"] = record["full_name"]
+        residents.append(record)
+    return residents 
+
+
+async def get_all_residents_by_nurse(
+    db, nurse: Optional[str]
+) -> List[RegistrationResponse]:
+    query = {}
+    if nurse:
+        query["primary_nurse"] = nurse
+
+    cursor = db["resident_info"].find(query)
+    residents = []
+    async for record in cursor:
+        residents.append(RegistrationResponse(**record))
+    return residents
+
+
+async def get_resident_full_name(db, resident_id: str) -> str:
+    user = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"full_name": 1}
+    )
+    return user["full_name"] if user and "full_name" in user else "Unknown"
+
+
+async def get_resident_room(db, resident_id: str) -> str:
+    resident = await db.resident_info.find_one(
+        {"_id": ObjectId(resident_id)}, {"room_number": 1}
+    )
+    return (
+        resident["room_number"] if resident and "room_number" in resident else "Unknown"
+    )

@@ -1,10 +1,11 @@
-from fastapi import Depends, APIRouter, HTTPException, status, Request, Body
+from fastapi import Depends, APIRouter, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from db.connection import get_db
 from models.user import UserCreate, UserResponse, Token, RefreshTokenRequest
 from auth.jwttoken import refresh_access_token
 from services.user_service import (
+    get_user_role,
     get_user_by_email_service,
     register_user,
     login_user,
@@ -14,7 +15,7 @@ from services.user_service import (
     delete_user,
 )
 from utils.limiter import limiter
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -42,8 +43,8 @@ async def login(
 
 @router.get("/", response_model=List[UserResponse], response_model_by_alias=False)
 @limiter.limit("100/minute")
-async def get_users(request: Request, db=Depends(get_db)):
-    users = await get_all_users(db)
+async def get_users(request: Request, email:Optional[str]=None, db=Depends(get_db)):
+    users = await get_all_users(email=email, db=db)
     return users
 
 
@@ -69,6 +70,12 @@ async def update_user_details(
 @limiter.limit("10/minute")
 async def delete_user_by_id(request: Request, user_id: str, db=Depends(get_db)):
     await delete_user(db, user_id)
+
+
+@router.get("/me/role")
+@limiter.limit("10/minute")
+async def get_current_user_role(request: Request, role: str = Depends(get_user_role)):
+    return {"role": role}
 
 
 @router.get("/email/{email}", status_code=status.HTTP_200_OK)
