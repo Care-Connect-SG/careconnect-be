@@ -11,10 +11,14 @@ from services.task_service import (
     reassign_task,
     complete_task,
     reopen_task,
+    duplicate_task,
+    download_task,
 )
 from utils.limiter import limiter
 from services.user_service import require_roles, get_current_user
 from typing import Optional, List
+from fastapi.responses import StreamingResponse
+import io
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -149,3 +153,38 @@ async def reopen_task_route(
 ):
     reopened_task = await reopen_task(db, task_id)
     return reopened_task
+
+
+@router.post(
+    "/{task_id}/duplicate",
+    summary="Duplicate a task",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def duplicate_task_route(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    duplicated_task = await duplicate_task(db, task_id)
+    return duplicated_task
+
+
+@router.get(
+    "/{task_id}/download",
+    summary="Download a task as text file",
+    response_class=StreamingResponse,
+)
+@limiter.limit("10/minute")
+async def download_task_route(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    text_content = await download_task(db, task_id)
+    return StreamingResponse(
+        io.BytesIO(text_content),
+        media_type="text/plain",
+        headers={"Content-Disposition": f"attachment; filename=task-{task_id}.txt"}
+    )
