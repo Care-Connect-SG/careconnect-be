@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from models.base import PyObjectId, ModelConfig
 
@@ -14,7 +14,7 @@ class RegistrationCreate(BaseModel):
     relationship: str
     room_number: Optional[str] = None
     additional_notes: Optional[str] = None
-    additional_notes_timestamp: Optional[date] = None
+    additional_notes_timestamp: Optional[datetime] = None
     primary_nurse: Optional[str] = None
 
 
@@ -30,7 +30,7 @@ class RegistrationResponse(ModelConfig):
     room_number: str
     admission_date: date
     additional_notes: Optional[str] = None
-    additional_notes_timestamp: Optional[date] = None
+    additional_notes_timestamp: Optional[datetime] = None
     primary_nurse: Optional[str] = None
 
 class ResidentTagResponse(BaseModel):
