@@ -3,10 +3,14 @@ from models.task import TaskStatus, TaskCreate, TaskResponse
 from bson import ObjectId
 from fastapi import HTTPException
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
 
+try:
+    from dateutil.relativedelta import relativedelta
+except ImportError:
+    relativedelta = None
 
 # Create Task
 async def create_task(
@@ -24,6 +28,63 @@ async def create_task(
         tasks_created.append(TaskResponse(**new_task))
     return tasks_created
 
+async def create_recurring_task(db, task_data: TaskCreate, current_user: dict) -> list[TaskResponse]:
+
+    tasks_created = []
+
+    # Validate required recurring fields.
+    if not task_data.recurring or not task_data.start_date or not task_data.end_recurring_date:
+        raise ValueError("Recurring task must have 'recurring', 'start_date', and 'end_recurring_date' set.")
+    
+    recurrence = task_data.recurring
+    current_start_date = task_data.start_date
+    current_due_date = task_data.due_date if task_data.due_date else task_data.start_date
+
+    # Convert end_recurring_date (a date) into a datetime with timezone info.
+    end_recurring_datetime = datetime.combine(task_data.end_recurring_date, datetime.min.time(), tzinfo=timezone.utc)
+
+    while current_start_date <= end_recurring_datetime:
+        occurrence_task_data = task_data.copy(deep=True)
+        occurrence_task_data.start_date = current_start_date
+        occurrence_task_data.due_date = current_due_date
+        
+        occurrence_task_data.end_recurring_date = None
+
+        occurrence_tasks = await create_task(db, occurrence_task_data, current_user)
+        tasks_created.extend(occurrence_tasks)
+
+        if recurrence == "Daily":
+            current_start_date += timedelta(days=1)
+            current_due_date += timedelta(days=1)
+        elif recurrence == "Weekly":
+            current_start_date += timedelta(weeks=1)
+            current_due_date += timedelta(weeks=1)
+        elif recurrence == "Monthly":
+            if relativedelta:
+                current_start_date += relativedelta(months=1)
+                current_due_date += relativedelta(months=1)
+            else:
+                # Fallback: simple month increment (may not handle all edge cases)
+                new_month = current_start_date.month % 12 + 1
+                new_year = current_start_date.year + (current_start_date.month // 12)
+                current_start_date = current_start_date.replace(year=new_year, month=new_month)
+                if task_data.due_date:
+                    new_month = current_due_date.month % 12 + 1
+                    new_year = current_due_date.year + (current_due_date.month // 12)
+                    current_due_date = current_due_date.replace(year=new_year, month=new_month)
+        elif recurrence == "Annually":
+            if relativedelta:
+                current_start_date += relativedelta(years=1)
+                current_due_date += relativedelta(years=1)
+            else:
+                current_start_date = current_start_date.replace(year=current_start_date.year + 1)
+                if task_data.due_date:
+                    current_due_date = current_due_date.replace(year=current_due_date.year + 1)
+        else:
+            # If an unsupported recurrence type is provided, break the loop.
+            break
+
+    return tasks_created
 
 # Get All Tasks (With Filters)
 async def get_tasks(
