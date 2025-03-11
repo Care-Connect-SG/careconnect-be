@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from models.careplan import CarePlanCreate, CarePlanResponse
 from typing import List
-from services.careplan import (
+from services.careplan_service import (
     create_careplan,
     get_careplans_by_resident,
     get_careplan_by_id,
