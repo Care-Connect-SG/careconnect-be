@@ -33,6 +33,7 @@ class RegistrationResponse(ModelConfig):
     additional_notes_timestamp: Optional[datetime] = None
     primary_nurse: Optional[str] = None
 
+
 class ResidentTagResponse(BaseModel):
     id: str
     name: str
