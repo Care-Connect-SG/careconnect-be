@@ -48,6 +48,7 @@ class TaskCreate(BaseModel):
     remind_prior: Optional[int] = None
     is_ai_generated: bool = False
     assigned_to: PyObjectId
+    series_id: Optional[str] = None
 
 
 class TaskResponse(ModelConfig):
@@ -73,3 +74,4 @@ class TaskResponse(ModelConfig):
     resident_name: str = "Unknown"
     resident_room: str = "Unknown"
     created_by: PyObjectId
+    series_id: Optional[str] = None

@@ -28,8 +28,8 @@ async def create_task(
         tasks_created.append(TaskResponse(**new_task))
     return tasks_created
 
-async def create_recurring_task(db, task_data: TaskCreate, current_user: dict) -> list[TaskResponse]:
-
+# Create Recurring Task
+async def create_recurring_task(db, task_data: TaskCreate, current_user: dict) -> List[TaskResponse]:
     tasks_created = []
 
     # Validate required recurring fields.
@@ -43,16 +43,20 @@ async def create_recurring_task(db, task_data: TaskCreate, current_user: dict) -
     # Convert end_recurring_date (a date) into a datetime with timezone info.
     end_recurring_datetime = datetime.combine(task_data.end_recurring_date, datetime.min.time(), tzinfo=timezone.utc)
 
+    # Generate a unique series_id using ObjectId.
+    series_id = str(ObjectId())
+
     while current_start_date <= end_recurring_datetime:
         occurrence_task_data = task_data.copy(deep=True)
         occurrence_task_data.start_date = current_start_date
         occurrence_task_data.due_date = current_due_date
-        
         occurrence_task_data.end_recurring_date = None
+        occurrence_task_data.series_id = series_id  # series_id for grouping
 
         occurrence_tasks = await create_task(db, occurrence_task_data, current_user)
         tasks_created.extend(occurrence_tasks)
 
+        # Increment dates based on recurrence type.
         if recurrence == "Daily":
             current_start_date += timedelta(days=1)
             current_due_date += timedelta(days=1)
@@ -64,7 +68,6 @@ async def create_recurring_task(db, task_data: TaskCreate, current_user: dict) -
                 current_start_date += relativedelta(months=1)
                 current_due_date += relativedelta(months=1)
             else:
-                # Fallback: simple month increment (may not handle all edge cases)
                 new_month = current_start_date.month % 12 + 1
                 new_year = current_start_date.year + (current_start_date.month // 12)
                 current_start_date = current_start_date.replace(year=new_year, month=new_month)
@@ -81,7 +84,6 @@ async def create_recurring_task(db, task_data: TaskCreate, current_user: dict) -
                 if task_data.due_date:
                     current_due_date = current_due_date.replace(year=current_due_date.year + 1)
         else:
-            # If an unsupported recurrence type is provided, break the loop.
             break
 
     return tasks_created
