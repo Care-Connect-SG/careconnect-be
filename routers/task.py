@@ -4,7 +4,6 @@ from db.connection import get_db
 from models.task import TaskResponse, TaskCreate, TaskStatus
 from services.task_service import (
     create_task,
-    create_recurring_task,
     get_tasks,
     get_task_by_id,
     update_task,
@@ -36,23 +35,6 @@ async def create_new_task(
 ):
     new_task = await create_task(db, task, current_user)
     return new_task
-
-@router.post(
-    "/recurring",
-    summary="Create a new recurring task",
-    response_model=List[TaskResponse],
-    status_code=status.HTTP_201_CREATED,
-    response_model_by_alias=False,
-)
-@limiter.limit("10/minute")
-async def create_new_recurring_task(
-    request: Request,
-    task: TaskCreate,
-    db: AsyncIOMotorDatabase = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    new_tasks = await create_recurring_task(db, task, current_user)
-    return new_tasks
 
 
 @router.get(
