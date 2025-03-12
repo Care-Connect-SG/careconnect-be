@@ -72,8 +72,11 @@ async def update_resident(
         raise HTTPException(status_code=400, detail="Invalid resident ID")
     update_dict = update_data.dict()
 
-    # Convert date_of_birth from date to datetime if necessary.
-    if "date_of_birth" in update_dict and isinstance(update_dict["date_of_birth"], datetime.date) and not isinstance(update_dict["date_of_birth"], datetime.datetime):
+    if (
+        "date_of_birth" in update_dict
+        and isinstance(update_dict["date_of_birth"], datetime.date)
+        and not isinstance(update_dict["date_of_birth"], datetime.datetime)
+    ):
         update_dict["date_of_birth"] = datetime.datetime.combine(
             update_dict["date_of_birth"], datetime.time.min
         )
@@ -82,20 +85,22 @@ async def update_resident(
         ts = update_dict.get("additional_notes_timestamp")
         if isinstance(ts, str):
             try:
-            # Replace trailing "Z" with "+00:00" to parse UTC time correctly.
                 ts = ts.replace("Z", "+00:00")
-                dt_utc = datetime.datetime.fromisoformat(ts)  # dt_utc is timezone-aware in UTC
-                # Convert to UTC+8 (or your desired timezone)
-                dt_local = dt_utc.astimezone(datetime.timezone(datetime.timedelta(hours=8)))
+                dt_utc = datetime.datetime.fromisoformat(ts)
+                dt_local = dt_utc.astimezone(
+                    datetime.timezone(datetime.timedelta(hours=8))
+                )
                 update_dict["additional_notes_timestamp"] = dt_local
             except Exception:
-                raise HTTPException(status_code=400, detail="Invalid additional_notes_timestamp format")
+                raise HTTPException(
+                    status_code=400, detail="Invalid additional_notes_timestamp format"
+                )
     elif isinstance(ts, datetime.date) and not isinstance(ts, datetime.datetime):
-        update_dict["additional_notes_timestamp"] = datetime.datetime.combine(ts, datetime.time.min)
-    # Perform the update
+        update_dict["additional_notes_timestamp"] = datetime.datetime.combine(
+            ts, datetime.time.min
+        )
     result = await db["resident_info"].update_one(
-        {"_id": ObjectId(resident_id)},
-        {"$set": update_dict}
+        {"_id": ObjectId(resident_id)}, {"$set": update_dict}
     )
     if result.modified_count == 0:
         resident = await db["resident_info"].find_one({"_id": ObjectId(resident_id)})
@@ -105,6 +110,7 @@ async def update_resident(
     if not updated_record:
         raise HTTPException(status_code=404, detail="Resident not found")
     return RegistrationResponse(**updated_record)
+
 
 async def delete_resident(db, resident_id: str) -> dict:
     if not ObjectId.is_valid(resident_id):
