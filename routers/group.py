@@ -11,8 +11,10 @@ from services.group_service import (
     remove_user_from_group,
     search_group,
     get_user_groups,
+    get_group_by_id,
 )
 from utils.limiter import limiter
+from services.user_service import check_permissions
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 
@@ -35,6 +37,16 @@ async def add_user(request: Request, group_id: str, user_id: str, db=Depends(get
 @limiter.limit("100/minute")
 async def list_groups(request: Request, db=Depends(get_db)):
     return await get_all_groups(db)
+
+
+@router.get("/{group_id}", response_model=GroupResponse, response_model_by_alias=False)
+@limiter.limit("100/minute")
+async def get_group_by_id_route(
+    request: Request,
+    group_id: str,
+    db=Depends(get_db),
+):
+    return await get_group_by_id(db, group_id)
 
 
 @router.put("/edit", response_model=GroupResponse, response_model_by_alias=False)

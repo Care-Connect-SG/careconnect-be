@@ -6,9 +6,6 @@ from typing import List
 from datetime import datetime, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
-from weasyprint import HTML
-import json
-
 
 # Create Task
 async def create_task(
@@ -81,19 +78,16 @@ async def get_task_by_id(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse
 async def update_task(
     db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskUpdate
 ) -> TaskResponse:
-    # Get the existing task
+
     existing_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not existing_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Convert the update data to a dict and remove None values
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
 
-    # If no fields are being updated, return the existing task
     if not update_data:
         return TaskResponse(**existing_task)
 
-    # Update the task
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
@@ -104,12 +98,10 @@ async def update_task(
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="No changes detected in update")
 
-    # Retrieve the updated document and return
     updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not updated_task_doc:
         raise HTTPException(status_code=500, detail="Failed to retrieve updated task")
 
-    # Enrich the task with names
     updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
     updated_task_doc = await enrich_task_with_room(db, updated_task_doc)
 
@@ -129,7 +121,6 @@ async def update_if_overdue(db, task: dict) -> dict:
     if task.get("due_date") and task.get("status") != TaskStatus.COMPLETED:
         now = datetime.now(timezone.utc)
         due_date = task["due_date"]
-        # If due_date is naive (no tzinfo), assume it is UTC and attach timezone info
         if due_date.tzinfo is None:
             due_date = due_date.replace(tzinfo=timezone.utc)
         if now > due_date:

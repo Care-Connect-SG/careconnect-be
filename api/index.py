@@ -6,6 +6,7 @@ from routers.group import router as group_router
 from routers.task import router as task_router
 from routers.resident import router as resident_router
 from routers.medication import router as medication_router
+from routers.careplan import router as careplan_router
 from routers.incident.form import router as form_router
 from routers.incident.report import router as report_router
 from routers.tag import router as tag_router
@@ -32,6 +33,7 @@ app.include_router(medication_router)
 app.include_router(form_router)
 app.include_router(report_router)
 app.include_router(tag_router)
+app.include_router(careplan_router)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
