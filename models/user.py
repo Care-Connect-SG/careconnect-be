@@ -51,6 +51,6 @@ class CaregiverTagResponse(BaseModel):
     name: str
     role: str
 
-    
+
 class RefreshTokenRequest(BaseModel):
     refresh_token: str

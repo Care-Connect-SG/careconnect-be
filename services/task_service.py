@@ -88,7 +88,7 @@ async def update_task(
 
     # Convert the update data to a dict and remove None values
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
-    
+
     # If no fields are being updated, return the existing task
     if not update_data:
         return TaskResponse(**existing_task)
@@ -220,49 +220,46 @@ async def enrich_task_with_room(db, task: dict) -> dict:
     return task
 
 
+# Duplicate Task
 async def duplicate_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
-    # Get the original task
     original_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not original_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Create a copy of the task data
     task_copy = original_task.copy()
-    
-    # Remove the _id field to create a new document
+
     task_copy.pop("_id", None)
-    
-    # Update the title to indicate it's a copy
+
     task_copy["task_title"] = f"{task_copy['task_title']} (Copy)"
-    
-    # Set new creation timestamp
+
     task_copy["created_at"] = datetime.now(timezone.utc)
-    
-    # Insert the new task
+
     result = await db.tasks.insert_one(task_copy)
-    
-    # Get the new task with enriched data
+
     new_task = await db.tasks.find_one({"_id": result.inserted_id})
     new_task = await enrich_task_with_names(db, new_task)
     new_task = await enrich_task_with_room(db, new_task)
-    
+
     return TaskResponse(**new_task)
 
 
+# Download Task
 async def download_task(db: AsyncIOMotorDatabase, task_id: str) -> bytes:
-    # Get the task with enriched data
+
     task = await get_task_by_id(db, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Convert task to dictionary and format dates
     task_dict = task.model_dump()
     task_dict["created_at"] = task_dict["created_at"].strftime("%Y-%m-%d %H:%M:%S")
     task_dict["due_date"] = task_dict["due_date"].strftime("%Y-%m-%d %H:%M:%S")
     finished_at = task_dict.get("finished_at")
-    finished_at_text = f"\nFinished At: {finished_at.strftime('%Y-%m-%d %H:%M:%S')}" if finished_at else ""
+    finished_at_text = (
+        f"\nFinished At: {finished_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        if finished_at
+        else ""
+    )
 
-    # Create text content
     text_content = f"""Task Details
 =============
 
@@ -277,4 +274,4 @@ Created At: {task_dict["created_at"]}
 Due Date: {task_dict["due_date"]}{finished_at_text}
 """
 
-    return text_content.encode('utf-8')
+    return text_content.encode("utf-8")

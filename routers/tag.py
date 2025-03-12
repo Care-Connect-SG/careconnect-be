@@ -11,12 +11,17 @@ from utils.limiter import limiter
 
 router = APIRouter(prefix="/tags", tags=["Resident and Caregiver Tags"])
 
-@router.get("/residents", response_model=List[ResidentTagResponse], response_model_by_alias=False)
+
+@router.get(
+    "/residents",
+    response_model=List[ResidentTagResponse],
+    response_model_by_alias=False,
+)
 @limiter.limit("100/minute")
 async def search_resident_tags(
     request: Request,
-    search_key: Optional[str]=None,
-    limit: int=10,
+    search_key: Optional[str] = None,
+    limit: int = 10,
     db=Depends(get_db),
 ):
     return await get_resident_tags(search_key, limit, db)
@@ -25,8 +30,9 @@ async def search_resident_tags(
 @router.get("/caregivers", response_model=List[CaregiverTagResponse])
 @limiter.limit("100/minute")
 async def search_users_by_name(
-    request: Request, 
-    search_key: Optional[str]=None, 
-    limit: int=10, db=Depends(get_db)
+    request: Request,
+    search_key: Optional[str] = None,
+    limit: int = 10,
+    db=Depends(get_db),
 ):
     return await get_caregiver_tags(search_key, limit, db)

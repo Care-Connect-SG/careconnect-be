@@ -28,7 +28,9 @@ async def create_new_form(request: Request, form: FormCreate, db=Depends(get_db)
     response_model_by_alias=False,
 )
 @limiter.limit("100/minute")
-async def list_forms(request: Request, status: Optional[str] = None, db=Depends(get_db)):
+async def list_forms(
+    request: Request, status: Optional[str] = None, db=Depends(get_db)
+):
     return await get_forms(status, db)
 
 

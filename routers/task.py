@@ -186,5 +186,5 @@ async def download_task_route(
     return StreamingResponse(
         io.BytesIO(text_content),
         media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename=task-{task_id}.txt"}
+        headers={"Content-Disposition": f"attachment; filename=task-{task_id}.txt"},
     )
