@@ -37,6 +37,7 @@ async def create_new_task(
     new_task = await create_task(db, task, current_user)
     return new_task
 
+
 @router.post(
     "/recurring",
     summary="Create a new recurring task",
@@ -144,7 +145,7 @@ async def modify_task_assignment(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def complete_task_route(
+async def complete_task(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -160,7 +161,7 @@ async def complete_task_route(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def reopen_task_route(
+async def reopen_task(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
