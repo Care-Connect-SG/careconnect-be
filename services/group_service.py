@@ -48,6 +48,17 @@ async def get_all_groups(db, role: str = Depends(check_permissions(["Admin"]))):
     return groups
 
 
+async def get_group_by_id(db, group_id: str):
+    try:
+        oid = ObjectId(group_id)
+    except errors.InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid group id format")
+    group = await db["groups"].find_one({"_id": oid})
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return group
+
+
 async def update_group(
     db,
     group_id: str,
