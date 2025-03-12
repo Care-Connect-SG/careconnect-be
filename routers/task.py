@@ -1,7 +1,7 @@
 from fastapi import Depends, APIRouter, Request, status, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
-from models.task import TaskResponse, TaskCreate, TaskStatus
+from models.task import TaskResponse, TaskCreate, TaskUpdate, TaskStatus
 from services.task_service import (
     create_task,
     get_tasks,
@@ -84,7 +84,7 @@ async def fetch_task_by_id(
 async def modify_task(
     request: Request,
     task_id: str,
-    task: TaskCreate,
+    task: TaskUpdate,
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     updated_task = await update_task(db, task_id, task)

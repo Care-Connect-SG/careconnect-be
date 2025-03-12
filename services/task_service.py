@@ -1,5 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from models.task import TaskStatus, TaskCreate, TaskResponse
+from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
 from bson import ObjectId
 from fastapi import HTTPException
 from typing import List
@@ -77,11 +77,18 @@ async def get_task_by_id(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse
 
 # Update Task
 async def update_task(
-    db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskCreate
+    db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskUpdate
 ) -> TaskResponse:
+
+    existing_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not existing_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
 
-    # Ensure MongoDB updates correctly
+    if not update_data:
+        return TaskResponse(**existing_task)
+
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
@@ -92,10 +99,12 @@ async def update_task(
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="No changes detected in update")
 
-    # Retrieve the updated document and return
     updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not updated_task_doc:
         raise HTTPException(status_code=500, detail="Failed to retrieve updated task")
+
+    updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
+    updated_task_doc = await enrich_task_with_room(db, updated_task_doc)
 
     return TaskResponse(**updated_task_doc)
 
