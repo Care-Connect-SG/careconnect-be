@@ -50,18 +50,6 @@ def get_user_role(token: str = Depends(oauth2_scheme)):
     return user_data.get("role")
 
 
-def check_permissions(required_roles: list):
-    """Ensures the user has the necessary role for the requested resource."""
-
-    def _check_permissions(token: str = Depends(oauth2_scheme)):
-        user_role = get_user_role(token)
-        if user_role not in required_roles:
-            raise HTTPException(status_code=403, detail="Access denied")
-        return user_role
-
-    return _check_permissions
-
-
 # Register User
 async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserResponse:
     existing_user = await db["users"].find_one({"email": user.email})
