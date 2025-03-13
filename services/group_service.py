@@ -26,7 +26,7 @@ async def add_user_to_group(db, group_id: str, user_id: str):
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     if user_id in group.get("members", []):
-        raise HTTPException(status_code=400, detail="User already in group")
+        raise HTTPException(status_code=400, detail="User is already in the group")
     await db["groups"].update_one({"_id": oid}, {"$push": {"members": user_id}})
     return {"res": f"User {user_id} added to group with id {group_id}"}
 
