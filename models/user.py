@@ -37,7 +37,6 @@ class UserResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     email: EmailStr
     name: str
-    password: str
     contact_number: Optional[str] = None
     role: Role
     organisation_rank: Optional[str] = None
