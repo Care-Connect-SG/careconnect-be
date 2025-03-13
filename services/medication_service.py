@@ -92,4 +92,4 @@ async def delete_medication(db, resident_id: str, medication_id: str):
     result = await db["medications"].delete_one({"_id": ObjectId(medication_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Medication not found")
-    return {"message": "Medication record deleted successfully"}
+    return {"detail": "Medication record deleted successfully"}

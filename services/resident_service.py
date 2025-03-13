@@ -102,7 +102,7 @@ async def delete_resident(db, resident_id: str) -> dict:
     result = await db["resident_info"].delete_one({"_id": ObjectId(resident_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Resident not found")
-    return {"message": "Resident record deleted successfully"}
+    return {"detail": "Resident record deleted successfully"}
 
 
 async def get_resident_tags(search_key: str, limit, db) -> List[ResidentTagResponse]:
