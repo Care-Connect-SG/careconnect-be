@@ -46,7 +46,7 @@ class Token(BaseModel):
     email: str
 
 
-class CaregiverTagResponse(BaseModel):
+class UserTagResponse(BaseModel):
     id: str
     name: str
     role: str

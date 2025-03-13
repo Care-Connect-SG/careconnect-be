@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, Depends
 from auth.hashing import Hash
 from auth.jwttoken import create_access_token, create_refresh_token, verify_token
 from bson import ObjectId
-from models.user import CaregiverTagResponse, UserResponse, UserCreate
+from models.user import UserTagResponse, UserResponse, UserCreate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
 from typing import List, Dict, Optional
@@ -179,9 +179,7 @@ async def get_all_users(
 
 
 # Search for caregiver by name - for use in report tagging
-async def get_caregiver_tags(
-    search_key: str, limit: int, db
-) -> List[CaregiverTagResponse]:
+async def get_caregiver_tags(search_key: str, limit: int, db) -> List[UserTagResponse]:
     if search_key:
         cursor = (
             db["users"]
