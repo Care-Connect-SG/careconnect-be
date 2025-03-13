@@ -103,7 +103,7 @@ async def remove_task(
     request: Request, task_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     result = await delete_task(db, task_id)
-    return {"message": "Task deleted successfully", "result": result}
+    return {"detail": "Task deleted successfully", "result": result}
 
 
 @router.patch(

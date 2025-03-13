@@ -28,6 +28,11 @@ class UserCreate(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class UserPasswordUpdate(BaseModel):
+    current_password: str = Field(..., description="The user's current password")
+    new_password: str = Field(..., description="The new password")
+
+
 class UserResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     email: EmailStr
@@ -39,17 +44,17 @@ class UserResponse(ModelConfig):
     gender: Gender
 
 
+class UserTagResponse(BaseModel):
+    id: str
+    name: str
+    role: str
+
+
 class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
     email: str
-
-
-class UserTagResponse(BaseModel):
-    id: str
-    name: str
-    role: str
 
 
 class RefreshTokenRequest(BaseModel):

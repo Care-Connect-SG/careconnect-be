@@ -113,7 +113,7 @@ async def update_task(
 async def delete_task(db: AsyncIOMotorDatabase, task_id: str) -> dict:
     result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
     if result.deleted_count:
-        return {"message": "Task deleted successfully"}
+        return {"detail": "Task deleted successfully"}
     raise HTTPException(status_code=404, detail="Task not found")
 
 
