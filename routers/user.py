@@ -13,9 +13,10 @@ from services.user_service import (
     get_all_users,
     update_user,
     delete_user,
+    get_current_user,
 )
 from utils.limiter import limiter
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -48,6 +49,21 @@ async def get_users(request: Request, email: Optional[str] = None, db=Depends(ge
     return users
 
 
+@router.get("/me", response_model=UserResponse, response_model_by_alias=False)
+@limiter.limit("10/minute")
+async def get_current_user_details(
+    request: Request, current_user: Dict = Depends(get_current_user), db=Depends(get_db)
+):
+    user = await get_user_by_id(db, current_user["id"])
+    return user
+
+
+@router.get("/me/role")
+@limiter.limit("10/minute")
+async def get_current_user_role(request: Request, role: str = Depends(get_user_role)):
+    return {"role": role}
+
+
 @router.get("/{user_id}", response_model=UserResponse, response_model_by_alias=False)
 @limiter.limit("100/minute")
 async def get_user(request: Request, user_id: str, db=Depends(get_db)):
@@ -70,12 +86,6 @@ async def update_user_details(
 @limiter.limit("10/minute")
 async def delete_user_by_id(request: Request, user_id: str, db=Depends(get_db)):
     await delete_user(db, user_id)
-
-
-@router.get("/me/role")
-@limiter.limit("10/minute")
-async def get_current_user_role(request: Request, role: str = Depends(get_user_role)):
-    return {"role": role}
 
 
 @router.get("/email/{email}", status_code=status.HTTP_200_OK)

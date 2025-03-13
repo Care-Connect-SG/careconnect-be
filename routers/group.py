@@ -14,7 +14,6 @@ from services.group_service import (
     get_group_by_id,
 )
 from utils.limiter import limiter
-from services.user_service import check_permissions
 
 router = APIRouter(prefix="/groups", tags=["Groups"])
 

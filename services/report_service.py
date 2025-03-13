@@ -37,13 +37,11 @@ async def get_report_by_id(report_id: str, db) -> ReportResponse:
 
 async def update_report(report_id: str, report: ReportCreate, db) -> str:
     try:
-        print("report Id: ", report_id)
         object_id = ObjectId(report_id)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid report ID")
 
     report_data = await db["reports"].find_one({"_id": object_id})
-    print("report data: ", report_data)
     if not report_data:
         raise HTTPException(status_code=404, detail="Report not found")
 

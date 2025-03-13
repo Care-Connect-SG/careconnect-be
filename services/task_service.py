@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
 
+
 # Create Task
 async def create_task(
     db, task_data: TaskCreate, current_user: dict
