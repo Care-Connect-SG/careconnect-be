@@ -51,6 +51,24 @@ class TaskCreate(BaseModel):
     series_id: Optional[str] = None
 
 
+class TaskUpdate(BaseModel):
+    task_title: Optional[str] = Field(None, min_length=3, max_length=255)
+    task_details: Optional[str] = None
+    media: Optional[List[str]] = None
+    notes: Optional[str] = None
+    status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
+    category: Optional[TaskCategory] = None
+    residents: Optional[List[PyObjectId]] = None
+    start_date: Optional[datetime] = None
+    due_date: Optional[datetime] = None
+    recurring: Optional[Recurrence] = None
+    end_recurring_date: Optional[date] = None
+    remind_prior: Optional[int] = None
+    is_ai_generated: Optional[bool] = None
+    assigned_to: Optional[PyObjectId] = None
+
+
 class TaskResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     task_title: str = Field(..., min_length=3, max_length=255)

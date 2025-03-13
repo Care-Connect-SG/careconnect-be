@@ -8,7 +8,6 @@ async def create_careplan(db, resident_id: str, careplan_data: CarePlanCreate):
     if not ObjectId.is_valid(resident_id):
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
-    # Convert Pydantic model to dictionary
     careplan_dict = careplan_data.dict()
     careplan_dict["resident_id"] = resident_id
 
@@ -19,10 +18,8 @@ async def create_careplan(db, resident_id: str, careplan_data: CarePlanCreate):
             careplan_dict["created_date"], datetime.time.min
         )
 
-    # Insert into MongoDB
     result = await db["careplans"].insert_one(careplan_dict)
 
-    # Retrieve and return the newly inserted document
     new_careplan = await db["careplans"].find_one({"_id": result.inserted_id})
     new_careplan["id"] = str(new_careplan["_id"])
     del new_careplan["_id"]

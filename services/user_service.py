@@ -2,7 +2,7 @@ from fastapi import HTTPException, status, Depends
 from auth.hashing import Hash
 from auth.jwttoken import create_access_token, create_refresh_token, verify_token
 from bson import ObjectId
-from models.user import CaregiverTagResponse, UserResponse, UserCreate
+from models.user import UserTagResponse, UserResponse, UserCreate, UserPasswordUpdate
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
 from typing import List, Dict, Optional
@@ -48,18 +48,6 @@ def get_user_role(token: str = Depends(oauth2_scheme)):
         ),
     )
     return user_data.get("role")
-
-
-def check_permissions(required_roles: list):
-    """Ensures the user has the necessary role for the requested resource."""
-
-    def _check_permissions(token: str = Depends(oauth2_scheme)):
-        user_role = get_user_role(token)
-        if user_role not in required_roles:
-            raise HTTPException(status_code=403, detail="Access denied")
-        return user_role
-
-    return _check_permissions
 
 
 # Register User
@@ -143,6 +131,52 @@ async def update_user(
     return UserResponse(**updated_user)
 
 
+# Update User Password
+async def update_user_password_service(
+    db, user_id: str, password_data: UserPasswordUpdate
+) -> UserResponse:
+    try:
+        user_object_id = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user ID format"
+        )
+
+    user = await db["users"].find_one({"_id": user_object_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    if not Hash.verify(user["password"], password_data.current_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    try:
+        new_hashed_password = Hash.bcrypt(password_data.new_password)
+    except Exception as e:
+        print("Error hashing new password:", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error hashing new password",
+        )
+
+    result = await db["users"].update_one(
+        {"_id": user_object_id}, {"$set": {"password": new_hashed_password}}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password update failed",
+        )
+
+    updated_user = await db["users"].find_one({"_id": user_object_id})
+    return UserResponse(**updated_user)
+
+
 # Delete User (Delete)
 async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     user = await db["users"].find_one({"_id": ObjectId(user_id)})
@@ -179,9 +213,7 @@ async def get_all_users(
 
 
 # Search for caregiver by name - for use in report tagging
-async def get_caregiver_tags(
-    search_key: str, limit: int, db
-) -> List[CaregiverTagResponse]:
+async def get_caregiver_tags(search_key: str, limit: int, db) -> List[UserTagResponse]:
     if search_key:
         cursor = (
             db["users"]

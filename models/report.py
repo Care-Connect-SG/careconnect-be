@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from models.base import ModelConfig, PyObjectId
 from models.resident import ResidentTagResponse
-from models.user import CaregiverTagResponse
+from models.user import UserTagResponse
 
 
 class ReportStatus(str, Enum):
@@ -20,10 +20,10 @@ class ReportSectionContent(BaseModel):
 class ReportCreate(BaseModel):
     form_id: str
     form_name: str
-    reporter: CaregiverTagResponse
+    reporter: UserTagResponse
     primary_resident: Optional[ResidentTagResponse] = None
     involved_residents: Optional[List[ResidentTagResponse]] = []
-    involved_caregivers: Optional[List[CaregiverTagResponse]] = []
+    involved_caregivers: Optional[List[UserTagResponse]] = []
     report_content: List[ReportSectionContent]
     status: str
 

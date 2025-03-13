@@ -1,5 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from models.task import TaskStatus, TaskCreate, TaskResponse
+from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
 from bson import ObjectId
 from fastapi import HTTPException
 from typing import List
@@ -171,11 +171,18 @@ async def get_task_by_id(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse
 
 # Update Task
 async def update_task(
-    db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskCreate
+    db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskUpdate
 ) -> TaskResponse:
+
+    existing_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not existing_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
 
-    # Ensure MongoDB updates correctly
+    if not update_data:
+        return TaskResponse(**existing_task)
+
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
@@ -186,10 +193,12 @@ async def update_task(
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="No changes detected in update")
 
-    # Retrieve the updated document and return
     updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not updated_task_doc:
         raise HTTPException(status_code=500, detail="Failed to retrieve updated task")
+
+    updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
+    updated_task_doc = await enrich_task_with_room(db, updated_task_doc)
 
     return TaskResponse(**updated_task_doc)
 
@@ -198,7 +207,7 @@ async def update_task(
 async def delete_task(db: AsyncIOMotorDatabase, task_id: str) -> dict:
     result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
     if result.deleted_count:
-        return {"message": "Task deleted successfully"}
+        return {"detail": "Task deleted successfully"}
     raise HTTPException(status_code=404, detail="Task not found")
 
 
@@ -207,7 +216,6 @@ async def update_if_overdue(db, task: dict) -> dict:
     if task.get("due_date") and task.get("status") != TaskStatus.COMPLETED:
         now = datetime.now(timezone.utc)
         due_date = task["due_date"]
-        # If due_date is naive (no tzinfo), assume it is UTC and attach timezone info
         if due_date.tzinfo is None:
             due_date = due_date.replace(tzinfo=timezone.utc)
         if now > due_date:
@@ -296,3 +304,60 @@ async def enrich_task_with_room(db, task: dict) -> dict:
     else:
         task["resident_room"] = "Unknown"
     return task
+
+
+# Duplicate Task
+async def duplicate_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
+    original_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not original_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task_copy = original_task.copy()
+
+    task_copy.pop("_id", None)
+
+    task_copy["task_title"] = f"{task_copy['task_title']} (Copy)"
+
+    task_copy["created_at"] = datetime.now(timezone.utc)
+
+    result = await db.tasks.insert_one(task_copy)
+
+    new_task = await db.tasks.find_one({"_id": result.inserted_id})
+    new_task = await enrich_task_with_names(db, new_task)
+    new_task = await enrich_task_with_room(db, new_task)
+
+    return TaskResponse(**new_task)
+
+
+# Download Task
+async def download_task(db: AsyncIOMotorDatabase, task_id: str) -> bytes:
+
+    task = await get_task_by_id(db, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task_dict = task.model_dump()
+    task_dict["created_at"] = task_dict["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+    task_dict["due_date"] = task_dict["due_date"].strftime("%Y-%m-%d %H:%M:%S")
+    finished_at = task_dict.get("finished_at")
+    finished_at_text = (
+        f"\nFinished At: {finished_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        if finished_at
+        else ""
+    )
+
+    text_content = f"""Task Details
+=============
+
+Title: {task_dict["task_title"]}
+Details: {task_dict["task_details"]}
+Status: {task_dict["status"]}
+Priority: {task_dict["priority"]}
+Category: {task_dict["category"]}
+Assigned To: {task_dict["assigned_to_name"]}
+Resident: {task_dict["resident_name"]} (Room {task_dict["resident_room"]})
+Created At: {task_dict["created_at"]}
+Due Date: {task_dict["due_date"]}{finished_at_text}
+"""
+
+    return text_content.encode("utf-8")
