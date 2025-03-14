@@ -152,13 +152,17 @@ async def get_tasks(
             raise HTTPException(
                 status_code=400, detail="Invalid date format. Use YYYY-MM-DD."
             )
-        start_of_day = datetime.combine(date_obj, datetime.min.time(), tzinfo=timezone.utc)
-        end_of_day = datetime.combine(date_obj, datetime.max.time(), tzinfo=timezone.utc)
+        start_of_day = datetime.combine(
+            date_obj, datetime.min.time(), tzinfo=timezone.utc
+        )
+        end_of_day = datetime.combine(
+            date_obj, datetime.max.time(), tzinfo=timezone.utc
+        )
     else:
         now = datetime.now(timezone.utc)
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-    
+
     # Filter tasks by their start_date to match the toggled date.
     filters["start_date"] = {"$gte": start_of_day, "$lte": end_of_day}
 
@@ -169,7 +173,6 @@ async def get_tasks(
         task = await enrich_task_with_names(db, task)
         enriched_tasks.append(TaskResponse(**task))
     return enriched_tasks
-
 
 
 # Get Task by ID
@@ -204,11 +207,12 @@ async def update_task(
                 {"series_id": series_id}, {"$set": update_data}
             )
             if result.matched_count == 0:
-                raise HTTPException(status_code=404, detail="No tasks found for the series")
+                raise HTTPException(
+                    status_code=404, detail="No tasks found for the series"
+                )
             # Optionally, retrieve one task (for example, the current task) as the response.
             updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
             return TaskResponse(**updated_task_doc)
-       
 
     # Single task update.
     result = await db.tasks.update_one(
@@ -224,13 +228,29 @@ async def update_task(
     return TaskResponse(**updated_task_doc)
 
 
-
 # Delete Task
-async def delete_task(db: AsyncIOMotorDatabase, task_id: str) -> dict:
-    result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
-    if result.deleted_count:
-        return {"detail": "Task deleted successfully"}
-    raise HTTPException(status_code=404, detail="Task not found")
+async def delete_task(
+    db: AsyncIOMotorDatabase, task_id: str, delete_series: bool = False
+) -> dict:
+    # Find the task first to check if it's part of a series
+    task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if delete_series and task.get("series_id"):
+        # Delete all tasks in the series
+        result = await db.tasks.delete_many({"series_id": task["series_id"]})
+        if result.deleted_count:
+            return {
+                "detail": f"Series deleted successfully. {result.deleted_count} tasks were deleted."
+            }
+        raise HTTPException(status_code=404, detail="No tasks found in the series")
+    else:
+        # Delete single task
+        result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
+        if result.deleted_count:
+            return {"detail": "Task deleted successfully"}
+        raise HTTPException(status_code=404, detail="Task not found")
 
 
 # Update Task Status to Delayed if Overdue
