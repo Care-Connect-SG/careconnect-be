@@ -67,6 +67,7 @@ class TaskUpdate(BaseModel):
     remind_prior: Optional[int] = None
     is_ai_generated: Optional[bool] = None
     assigned_to: Optional[PyObjectId] = None
+    update_series: Optional[bool] = False
 
 
 class TaskResponse(ModelConfig):

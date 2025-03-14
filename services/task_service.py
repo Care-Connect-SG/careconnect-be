@@ -187,34 +187,42 @@ async def get_task_by_id(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse
 async def update_task(
     db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskUpdate
 ) -> TaskResponse:
-
+    # Find the existing task by its _id.
     existing_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not existing_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
 
-    if not update_data:
-        return TaskResponse(**existing_task)
+    # Check if the update_series flag is present and true.
+    if update_data.get("update_series"):
+        # Remove the flag from the payload so it isn't stored.
+        update_data.pop("update_series")
+        series_id = existing_task.get("series_id")
+        if series_id:
+            result = await db.tasks.update_many(
+                {"series_id": series_id}, {"$set": update_data}
+            )
+            if result.matched_count == 0:
+                raise HTTPException(status_code=404, detail="No tasks found for the series")
+            # Optionally, retrieve one task (for example, the current task) as the response.
+            updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+            return TaskResponse(**updated_task_doc)
+       
 
+    # Single task update.
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
-
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="No changes detected in update")
 
     updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
-    if not updated_task_doc:
-        raise HTTPException(status_code=500, detail="Failed to retrieve updated task")
-
-    updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
-    updated_task_doc = await enrich_task_with_room(db, updated_task_doc)
-
     return TaskResponse(**updated_task_doc)
+
 
 
 # Delete Task
