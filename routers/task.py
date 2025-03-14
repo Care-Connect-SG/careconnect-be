@@ -13,6 +13,10 @@ from services.task_service import (
     reopen_task,
     duplicate_task,
     download_task,
+    request_task_reassignment,
+    accept_task_reassignment,
+    reject_task_reassignment,
+    handle_task_self,
 )
 from utils.limiter import limiter
 from services.user_service import require_roles, get_current_user
@@ -188,3 +192,93 @@ async def download_task_route(
         media_type="text/plain",
         headers={"Content-Disposition": f"attachment; filename=task-{task_id}.txt"},
     )
+
+
+@router.post(
+    "/{task_id}/request-reassignment",
+    summary="Request task reassignment to another nurse",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def request_reassignment(
+    request: Request,
+    task_id: str,
+    target_nurse_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "Nurse":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only nurses can request task reassignment"
+        )
+    updated_task = await request_task_reassignment(db, task_id, target_nurse_id, current_user["id"])
+    return updated_task
+
+
+@router.post(
+    "/{task_id}/accept-reassignment",
+    summary="Accept a task reassignment request",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def accept_reassignment(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "Nurse":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only nurses can accept task reassignment"
+        )
+    updated_task = await accept_task_reassignment(db, task_id, current_user["id"])
+    return updated_task
+
+
+@router.post(
+    "/{task_id}/reject-reassignment",
+    summary="Reject a task reassignment request",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def reject_reassignment(
+    request: Request,
+    task_id: str,
+    rejection_reason: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "Nurse":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only nurses can reject task reassignment"
+        )
+    updated_task = await reject_task_reassignment(db, task_id, current_user["id"], rejection_reason)
+    return updated_task
+
+
+@router.post(
+    "/{task_id}/handle-self",
+    summary="Handle the task yourself after rejection",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def handle_task_self_route(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != "Nurse":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only nurses can handle tasks themselves"
+        )
+    updated_task = await handle_task_self(db, task_id, current_user["id"])
+    return updated_task
