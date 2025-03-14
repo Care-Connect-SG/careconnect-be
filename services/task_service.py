@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
 from bson import ObjectId
 from fastapi import HTTPException
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
@@ -127,6 +127,7 @@ async def get_tasks(
     priority: str = None,
     category: str = None,
     search: str = None,
+    date: str = None,  # New query parameter in "YYYY-MM-DD" format.
 ) -> List[TaskResponse]:
     filters = {}
     if assigned_to:
@@ -143,11 +144,23 @@ async def get_tasks(
             {"task_details": {"$regex": search, "$options": "i"}},
         ]
 
-    # Currently it restricts results to tasks due today.
-    now = datetime.now(timezone.utc)
-    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-    filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
+    # Determine the date range based on the provided date.
+    if date:
+        try:
+            date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+        except Exception:
+            raise HTTPException(
+                status_code=400, detail="Invalid date format. Use YYYY-MM-DD."
+            )
+        start_of_day = datetime.combine(date_obj, datetime.min.time(), tzinfo=timezone.utc)
+        end_of_day = datetime.combine(date_obj, datetime.max.time(), tzinfo=timezone.utc)
+    else:
+        now = datetime.now(timezone.utc)
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    # Filter tasks by their start_date to match the toggled date.
+    filters["start_date"] = {"$gte": start_of_day, "$lte": end_of_day}
 
     tasks = await db.tasks.find(filters).to_list(length=100)
     enriched_tasks = []
@@ -156,6 +169,7 @@ async def get_tasks(
         task = await enrich_task_with_names(db, task)
         enriched_tasks.append(TaskResponse(**task))
     return enriched_tasks
+
 
 
 # Get Task by ID
