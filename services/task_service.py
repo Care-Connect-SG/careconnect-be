@@ -146,12 +146,20 @@ async def get_tasks(
 
     if date:
         try:
-            selected_date = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            start_of_day = selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_of_day = selected_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            selected_date = datetime.strptime(date, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            start_of_day = selected_date.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            end_of_day = selected_date.replace(
+                hour=23, minute=59, second=59, microsecond=999999
+            )
             filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+            raise HTTPException(
+                status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
+            )
     else:
         # Default to today's tasks if no date is specified
         now = datetime.now(timezone.utc)
