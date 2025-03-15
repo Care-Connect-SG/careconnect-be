@@ -55,6 +55,7 @@ class TaskCreate(BaseModel):
     reassignment_requested_at: Optional[datetime] = None
     reassignment_rejection_reason: Optional[str] = None
     reassignment_rejected_at: Optional[datetime] = None
+    series_id: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -78,6 +79,7 @@ class TaskUpdate(BaseModel):
     reassignment_requested_at: Optional[datetime] = None
     reassignment_rejection_reason: Optional[str] = None
     reassignment_rejected_at: Optional[datetime] = None
+    update_series: Optional[bool] = False
 
 
 class TaskResponse(ModelConfig):
@@ -110,3 +112,4 @@ class TaskResponse(ModelConfig):
     reassignment_requested_at: Optional[datetime] = None
     reassignment_rejection_reason: Optional[str] = None
     reassignment_rejected_at: Optional[datetime] = None
+    series_id: Optional[str] = None

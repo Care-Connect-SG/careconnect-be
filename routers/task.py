@@ -59,12 +59,13 @@ async def fetch_tasks(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     category: Optional[str] = None,
+    date: Optional[str] = None,  # New query parameter for date (YYYY-MM-DD)
     db: AsyncIOMotorDatabase = Depends(get_db),
     user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
     if user.get("role") != "Admin":
         assigned_to = user.get("id")
-    tasks = await get_tasks(db, assigned_to, status, priority, category, search)
+    tasks = await get_tasks(db, assigned_to, status, priority, category, search, date)
     return tasks
 
 
@@ -104,9 +105,12 @@ async def modify_task(
 )
 @limiter.limit("10/minute")
 async def remove_task(
-    request: Request, task_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
+    request: Request,
+    task_id: str,
+    delete_series: bool = False,
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    result = await delete_task(db, task_id)
+    result = await delete_task(db, task_id, delete_series)
     return {"detail": "Task deleted successfully", "result": result}
 
 
@@ -134,7 +138,7 @@ async def modify_task_assignment(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def complete_task_route(
+async def complete_task(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -150,7 +154,7 @@ async def complete_task_route(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def reopen_task_route(
+async def reopen_task(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -211,9 +215,11 @@ async def request_reassignment(
     if current_user.get("role") != "Nurse":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can request task reassignment"
+            detail="Only nurses can request task reassignment",
         )
-    updated_task = await request_task_reassignment(db, task_id, target_nurse_id, current_user["id"])
+    updated_task = await request_task_reassignment(
+        db, task_id, target_nurse_id, current_user["id"]
+    )
     return updated_task
 
 
@@ -233,7 +239,7 @@ async def accept_reassignment(
     if current_user.get("role") != "Nurse":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can accept task reassignment"
+            detail="Only nurses can accept task reassignment",
         )
     updated_task = await accept_task_reassignment(db, task_id, current_user["id"])
     return updated_task
@@ -256,9 +262,11 @@ async def reject_reassignment(
     if current_user.get("role") != "Nurse":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can reject task reassignment"
+            detail="Only nurses can reject task reassignment",
         )
-    updated_task = await reject_task_reassignment(db, task_id, current_user["id"], rejection_reason)
+    updated_task = await reject_task_reassignment(
+        db, task_id, current_user["id"], rejection_reason
+    )
     return updated_task
 
 
@@ -278,7 +286,7 @@ async def handle_task_self_route(
     if current_user.get("role") != "Nurse":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can handle tasks themselves"
+            detail="Only nurses can handle tasks themselves",
         )
     updated_task = await handle_task_self(db, task_id, current_user["id"])
     return updated_task
