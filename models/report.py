@@ -25,7 +25,7 @@ class ReportCreate(BaseModel):
     involved_residents: List[ResidentTagResponse] = Field(default_factory=list)
     involved_caregivers: List[UserTagResponse] = Field(default_factory=list) 
     report_content: List[ReportSectionContent]
-    status: ReportStatus
+    status: str
 
 
 class ReportResponse(ReportCreate, ModelConfig):
