@@ -127,7 +127,7 @@ async def get_tasks(
     priority: str = None,
     category: str = None,
     search: str = None,
-    date: str = None,  # New query parameter in "YYYY-MM-DD" format.
+    date: str = None,
 ) -> List[TaskResponse]:
     filters = {}
     if assigned_to:
