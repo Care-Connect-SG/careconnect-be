@@ -31,12 +31,25 @@ async def create_resident_record(
 async def list_residents(
     request: Request,
     db=Depends(get_db),
-    nurse: Optional[str] = None,  # e.g. /residents?nurse=Alice
+    nurse: Optional[str] = None,
+    page: Optional[int] = 1,  # default to page 1 if not provided
 ):
+    limit = 8
+    # Ensure page is at least 1.
+    if page < 1:
+        page = 1
+    skip = (page - 1) * limit
+
+    query = {}
     if nurse:
-        return await get_all_residents_by_nurse(db, nurse)
-    else:
-        return await get_all_residents(db)
+        query["primary_nurse"] = nurse
+
+    cursor = db["resident_info"].find(query).skip(skip).limit(limit)
+    residents = []
+    async for record in cursor:
+        record["_id"] = str(record["_id"])
+        residents.append(RegistrationResponse.parse_obj(record))
+    return residents
 
 
 @router.get(
