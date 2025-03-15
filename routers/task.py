@@ -55,7 +55,7 @@ async def fetch_tasks(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     category: Optional[str] = None,
-    date: Optional[str] = None,  # Format: YYYY-MM-DD
+    date: Optional[str] = None,  # New query parameter for date (YYYY-MM-DD)
     db: AsyncIOMotorDatabase = Depends(get_db),
     user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
@@ -101,9 +101,12 @@ async def modify_task(
 )
 @limiter.limit("10/minute")
 async def remove_task(
-    request: Request, task_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
+    request: Request,
+    task_id: str,
+    delete_series: bool = False,
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    result = await delete_task(db, task_id)
+    result = await delete_task(db, task_id, delete_series)
     return {"detail": "Task deleted successfully", "result": result}
 
 

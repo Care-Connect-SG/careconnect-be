@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
 from bson import ObjectId
 from fastapi import HTTPException
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
@@ -144,28 +144,27 @@ async def get_tasks(
             {"task_details": {"$regex": search, "$options": "i"}},
         ]
 
+    # Determine the date range based on the provided date.
     if date:
         try:
-            selected_date = datetime.strptime(date, "%Y-%m-%d").replace(
-                tzinfo=timezone.utc
-            )
-            start_of_day = selected_date.replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            end_of_day = selected_date.replace(
-                hour=23, minute=59, second=59, microsecond=999999
-            )
-            filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
-        except ValueError:
+            date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+        except Exception:
             raise HTTPException(
-                status_code=400, detail="Invalid date format. Use YYYY-MM-DD"
+                status_code=400, detail="Invalid date format. Use YYYY-MM-DD."
             )
+        start_of_day = datetime.combine(
+            date_obj, datetime.min.time(), tzinfo=timezone.utc
+        )
+        end_of_day = datetime.combine(
+            date_obj, datetime.max.time(), tzinfo=timezone.utc
+        )
     else:
-        # Default to today's tasks if no date is specified
         now = datetime.now(timezone.utc)
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-        filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
+
+    # Filter tasks by their start_date to match the toggled date.
+    filters["start_date"] = {"$gte": start_of_day, "$lte": end_of_day}
 
     tasks = await db.tasks.find(filters).to_list(length=100)
     enriched_tasks = []
@@ -191,42 +190,67 @@ async def get_task_by_id(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse
 async def update_task(
     db: AsyncIOMotorDatabase, task_id: str, updated_task: TaskUpdate
 ) -> TaskResponse:
-
+    # Find the existing task by its _id.
     existing_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
     if not existing_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
 
-    if not update_data:
-        return TaskResponse(**existing_task)
+    # Check if the update_series flag is present and true.
+    if update_data.get("update_series"):
+        # Remove the flag from the payload so it isn't stored.
+        update_data.pop("update_series")
+        series_id = existing_task.get("series_id")
+        if series_id:
+            result = await db.tasks.update_many(
+                {"series_id": series_id}, {"$set": update_data}
+            )
+            if result.matched_count == 0:
+                raise HTTPException(
+                    status_code=404, detail="No tasks found for the series"
+                )
+            # Optionally, retrieve one task (for example, the current task) as the response.
+            updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+            return TaskResponse(**updated_task_doc)
 
+    # Single task update.
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
-
     if result.modified_count == 0:
         raise HTTPException(status_code=400, detail="No changes detected in update")
 
     updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
-    if not updated_task_doc:
-        raise HTTPException(status_code=500, detail="Failed to retrieve updated task")
-
-    updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
-    updated_task_doc = await enrich_task_with_room(db, updated_task_doc)
-
     return TaskResponse(**updated_task_doc)
 
 
 # Delete Task
-async def delete_task(db: AsyncIOMotorDatabase, task_id: str) -> dict:
-    result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
-    if result.deleted_count:
-        return {"detail": "Task deleted successfully"}
-    raise HTTPException(status_code=404, detail="Task not found")
+async def delete_task(
+    db: AsyncIOMotorDatabase, task_id: str, delete_series: bool = False
+) -> dict:
+    # Find the task first to check if it's part of a series
+    task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if delete_series and task.get("series_id"):
+        # Delete all tasks in the series
+        result = await db.tasks.delete_many({"series_id": task["series_id"]})
+        if result.deleted_count:
+            return {
+                "detail": f"Series deleted successfully. {result.deleted_count} tasks were deleted."
+            }
+        raise HTTPException(status_code=404, detail="No tasks found in the series")
+    else:
+        # Delete single task
+        result = await db.tasks.delete_one({"_id": ObjectId(task_id)})
+        if result.deleted_count:
+            return {"detail": "Task deleted successfully"}
+        raise HTTPException(status_code=404, detail="Task not found")
 
 
 # Update Task Status to Delayed if Overdue

@@ -35,7 +35,6 @@ async def list_residents(
     page: Optional[int] = 1,  # default to page 1 if not provided
 ):
     limit = 8
-    # Ensure page is at least 1.
     if page < 1:
         page = 1
     skip = (page - 1) * limit
