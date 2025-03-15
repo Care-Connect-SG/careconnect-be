@@ -54,6 +54,7 @@ class Token(BaseModel):
     refresh_token: str
     token_type: str
     email: str
+    id: str
 
 
 class RefreshTokenRequest(BaseModel):
