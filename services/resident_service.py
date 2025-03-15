@@ -70,19 +70,35 @@ async def update_resident(
 ) -> RegistrationResponse:
     if not ObjectId.is_valid(resident_id):
         raise HTTPException(status_code=400, detail="Invalid resident ID")
+
     update_dict = update_data.dict()
-    if "date_of_birth" in update_dict and isinstance(
-        update_dict["date_of_birth"], datetime.date
+
+    # Process date_of_birth: if it's a date (and not a datetime), convert it to datetime.
+    if (
+        "date_of_birth" in update_dict
+        and isinstance(update_dict["date_of_birth"], datetime.date)
+        and not isinstance(update_dict["date_of_birth"], datetime.datetime)
     ):
         update_dict["date_of_birth"] = datetime.datetime.combine(
             update_dict["date_of_birth"], datetime.time.min
         )
-    if "additional_notes_timestamp" in update_dict and isinstance(
-        update_dict.get("additional_notes_timestamp"), datetime.date
-    ):
-        update_dict["additional_notes_timestamp"] = datetime.datetime.combine(
-            update_dict["additional_notes_timestamp"], datetime.time.min
-        )
+
+    if "additional_notes_timestamp" in update_dict:
+        ts = update_dict.get("additional_notes_timestamp")
+        if isinstance(ts, str):
+            try:
+                update_dict["additional_notes_timestamp"] = (
+                    datetime.datetime.fromisoformat(ts)
+                )
+            except Exception:
+                raise HTTPException(
+                    status_code=400, detail="Invalid additional_notes_timestamp format"
+                )
+        elif isinstance(ts, datetime.date) and not isinstance(ts, datetime.datetime):
+            update_dict["additional_notes_timestamp"] = datetime.datetime.combine(
+                ts, datetime.time.min
+            )
+
     result = await db["resident_info"].update_one(
         {"_id": ObjectId(resident_id)}, {"$set": update_dict}
     )
@@ -93,7 +109,7 @@ async def update_resident(
     updated_record = await db["resident_info"].find_one({"_id": ObjectId(resident_id)})
     if not updated_record:
         raise HTTPException(status_code=404, detail="Resident not found")
-    return RegistrationResponse(**updated_record)
+    return RegistrationResponse.parse_obj(updated_record)
 
 
 async def delete_resident(db, resident_id: str) -> dict:
