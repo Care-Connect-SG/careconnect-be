@@ -34,6 +34,6 @@ class RegistrationResponse(ModelConfig):
     primary_nurse: Optional[str] = None
 
 
-class ResidentTagResponse(BaseModel):
-    id: str
+class ResidentTagResponse(ModelConfig):
+    id: PyObjectId = Field(alias="_id")
     name: str
