@@ -83,12 +83,10 @@ async def update_resident(
             update_dict["date_of_birth"], datetime.time.min
         )
 
-    # Process additional_notes_timestamp without any manual offset.
     if "additional_notes_timestamp" in update_dict:
         ts = update_dict.get("additional_notes_timestamp")
         if isinstance(ts, str):
             try:
-                # Parse the ISO string as a datetime; this will be timezone-aware if the string includes a timezone.
                 update_dict["additional_notes_timestamp"] = (
                     datetime.datetime.fromisoformat(ts)
                 )
@@ -100,7 +98,6 @@ async def update_resident(
             update_dict["additional_notes_timestamp"] = datetime.datetime.combine(
                 ts, datetime.time.min
             )
-        # If it's already a datetime, leave it as is.
 
     result = await db["resident_info"].update_one(
         {"_id": ObjectId(resident_id)}, {"$set": update_dict}
