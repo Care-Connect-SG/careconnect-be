@@ -127,6 +127,7 @@ async def get_tasks(
     priority: str = None,
     category: str = None,
     search: str = None,
+    date: str = None,
 ) -> List[TaskResponse]:
     filters = {}
     if assigned_to:
@@ -143,11 +144,20 @@ async def get_tasks(
             {"task_details": {"$regex": search, "$options": "i"}},
         ]
 
-    # Currently it restricts results to tasks due today.
-    now = datetime.now(timezone.utc)
-    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-    filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
+    if date:
+        try:
+            selected_date = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            start_of_day = selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_of_day = selected_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    else:
+        # Default to today's tasks if no date is specified
+        now = datetime.now(timezone.utc)
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        filters["due_date"] = {"$gte": start_of_day, "$lte": end_of_day}
 
     tasks = await db.tasks.find(filters).to_list(length=100)
     enriched_tasks = []
