@@ -54,7 +54,7 @@ async def edit_report(
     return await update_report(report_id, report, db)
 
 
-@router.delete("/{report_id}", summary="Delete a report", response_model=str)
+@router.delete("/{report_id}", summary="Delete a report", response_model=None)
 @limiter.limit("10/minute")
 async def delete_report(request: Request, report_id: str, db=Depends(get_db)):
     return await remove_report(report_id, db)
