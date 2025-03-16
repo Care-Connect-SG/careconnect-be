@@ -171,3 +171,5 @@ async def get_resident_room(db, resident_id: str) -> str:
     return (
         resident["room_number"] if resident and "room_number" in resident else "Unknown"
     )
+
+
