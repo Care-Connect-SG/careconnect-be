@@ -5,20 +5,17 @@ from bson import ObjectId
 
 from models.activity import Activity, ActivityCreate, ActivityUpdate, ActivityFilter
 from db.connection import get_db
-from auth.auth import get_current_user
-from models.user import User
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
 @router.post("/", response_model=Activity)
 async def create_activity(
     request: Request,
-    activity: ActivityCreate,
-    current_user: User = Depends(get_current_user)
+    activity: ActivityCreate
 ):
     db = await get_db(request)
     activity_dict = activity.model_dump()
-    activity_dict["created_by"] = str(current_user.id)
+    activity_dict["created_by"] = "temp_user"  # Temporary user ID
     activity_dict["created_at"] = datetime.utcnow()
     activity_dict["updated_at"] = datetime.utcnow()
     
@@ -35,8 +32,7 @@ async def list_activities(
     tags: Optional[str] = None,
     search: Optional[str] = None,
     sort_by: str = Query("start_time", regex="^(start_time|title|category)$"),
-    sort_order: str = Query("asc", regex="^(asc|desc)$"),
-    current_user: User = Depends(get_current_user)
+    sort_order: str = Query("asc", regex="^(asc|desc)$")
 ):
     db = await get_db(request)
     query = {}
@@ -63,8 +59,7 @@ async def list_activities(
 @router.get("/{activity_id}", response_model=Activity)
 async def get_activity(
     request: Request,
-    activity_id: str,
-    current_user: User = Depends(get_current_user)
+    activity_id: str
 ):
     db = await get_db(request)
     activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
@@ -76,16 +71,12 @@ async def get_activity(
 async def update_activity(
     request: Request,
     activity_id: str,
-    activity_update: ActivityUpdate,
-    current_user: User = Depends(get_current_user)
+    activity_update: ActivityUpdate
 ):
     db = await get_db(request)
     activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
-    
-    if activity["created_by"] != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Not authorized to update this activity")
 
     update_data = activity_update.model_dump(exclude_unset=True)
     update_data["updated_at"] = datetime.utcnow()
@@ -101,16 +92,12 @@ async def update_activity(
 @router.delete("/{activity_id}")
 async def delete_activity(
     request: Request,
-    activity_id: str,
-    current_user: User = Depends(get_current_user)
+    activity_id: str
 ):
     db = await get_db(request)
     activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
-    
-    if activity["created_by"] != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Not authorized to delete this activity")
 
     await db.activities.delete_one({"_id": ObjectId(activity_id)})
     return {"message": "Activity deleted successfully"} 
