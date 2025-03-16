@@ -10,6 +10,7 @@ from routers.careplan import router as careplan_router
 from routers.incident.form import router as form_router
 from routers.incident.report import router as report_router
 from routers.tag import router as tag_router
+from routers.medical_history import router as medicalHistory_router
 from db.connection import lifespan
 from utils.config import FE_URL
 from slowapi import _rate_limit_exceeded_handler
@@ -34,6 +35,7 @@ app.include_router(form_router)
 app.include_router(report_router)
 app.include_router(tag_router)
 app.include_router(careplan_router)
+app.include_router(medicalHistory_router)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
