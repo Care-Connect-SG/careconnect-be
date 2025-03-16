@@ -1,16 +1,16 @@
 from typing import List, Union
 from fastapi import APIRouter, Depends, Request, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from services.medicalHistory_service import get_all_medical_records
+from services.medical_history_service import get_all_medical_records
 from db.connection import get_db
-from models.medicalHistory import (
+from models.medical_history import (
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
     SurgicalHistoryRecord,
     ImmunizationRecord,
 )
-from services.medicalHistory_service import (
+from services.medical_history_service import (
     create_condition_record,
     create_allergy_record,
     create_chronic_illness_record,

@@ -2,7 +2,7 @@ import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi import HTTPException
 from typing import List, Union
-from models.medicalHistory import (
+from models.medical_history import (
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,

@@ -10,7 +10,7 @@ from routers.careplan import router as careplan_router
 from routers.incident.form import router as form_router
 from routers.incident.report import router as report_router
 from routers.tag import router as tag_router
-from routers.medicalHistory import router as medicalHistory_router
+from routers.medical_history import router as medicalHistory_router
 from db.connection import lifespan
 from utils.config import FE_URL
 from slowapi import _rate_limit_exceeded_handler
