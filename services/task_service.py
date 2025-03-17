@@ -65,8 +65,12 @@ async def create_recurring_task(
         task_data.end_recurring_date, datetime.min.time(), tzinfo=timezone.utc
     )
 
-    # Generate a unique series_id using ObjectId.
-    series_id = str(ObjectId())
+    # Use provided series_id or generate a new one
+    series_id = (
+        task_data.series_id
+        if hasattr(task_data, "series_id") and task_data.series_id
+        else str(ObjectId())
+    )
 
     while current_start_date <= end_recurring_datetime:
         occurrence_task_data = task_data.copy(deep=True)
@@ -203,14 +207,53 @@ async def update_task(
         update_data.pop("update_series")
         series_id = existing_task.get("series_id")
         if series_id:
-            result = await db.tasks.update_many(
-                {"series_id": series_id}, {"$set": update_data}
-            )
-            if result.matched_count == 0:
-                raise HTTPException(
-                    status_code=404, detail="No tasks found for the series"
+            # Separate date-related fields from other fields
+            date_fields = {}
+            non_date_fields = {}
+
+            for field, value in update_data.items():
+                if field in [
+                    "start_date",
+                    "due_date",
+                    "end_recurring_date",
+                    "recurring",
+                ]:
+                    date_fields[field] = value
+                else:
+                    non_date_fields[field] = value
+
+            # Ensure all dates are in UTC
+            if "start_date" in date_fields:
+                date_fields["start_date"] = date_fields["start_date"].replace(
+                    tzinfo=timezone.utc
                 )
-            # Optionally, retrieve one task (for example, the current task) as the response.
+            if "due_date" in date_fields:
+                date_fields["due_date"] = date_fields["due_date"].replace(
+                    tzinfo=timezone.utc
+                )
+            if "end_recurring_date" in date_fields:
+                date_fields["end_recurring_date"] = date_fields[
+                    "end_recurring_date"
+                ].replace(tzinfo=timezone.utc)
+
+            # Update non-date fields for all tasks in the series
+            if non_date_fields:
+                result = await db.tasks.update_many(
+                    {"series_id": series_id}, {"$set": non_date_fields}
+                )
+                if result.matched_count == 0:
+                    raise HTTPException(
+                        status_code=404, detail="No tasks found for the series"
+                    )
+
+            # Update date fields only for the current task
+            if date_fields:
+                result = await db.tasks.update_one(
+                    {"_id": ObjectId(task_id)}, {"$set": date_fields}
+                )
+                # Don't raise an error if date update fails, just continue
+
+            # Retrieve the current task as the response
             updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
             return TaskResponse(**updated_task_doc)
 
@@ -218,12 +261,10 @@ async def update_task(
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
-
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Task not found")
     if result.modified_count == 0:
-        raise HTTPException(status_code=400, detail="No changes detected in update")
+        raise HTTPException(status_code=404, detail="Task not found")
 
+    # Retrieve the updated task
     updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
     return TaskResponse(**updated_task_doc)
 
