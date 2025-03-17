@@ -1,26 +1,27 @@
 from typing import List, Union
 from fastapi import APIRouter, Depends, Request, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from services.medicalHistory_service import get_all_medical_records, delete_medical_record_by_id
+from services.medical_history_service import get_all_medical_records
 from db.connection import get_db
-from models.medicalHistory import (
+from models.medical_history import (
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
     SurgicalHistoryRecord,
     ImmunizationRecord,
 )
-from services.medicalHistory_service import (
+from services.medical_history_service import (
     create_condition_record,
     create_allergy_record,
     create_chronic_illness_record,
     create_surgical_history_record,
     create_immunization_record,
-     update_condition_record,
+    update_condition_record,
     update_allergy_record,
     update_chronic_illness_record,
     update_surgical_history_record,
     update_immunization_record,
+    delete_medical_record_by_id,
 )
 from utils.limiter import limiter
 
@@ -83,6 +84,7 @@ async def list_all_medical_records(
 ):
     return await get_all_medical_records(db)
 
+
 @router.put(
     "/{template_type}/{record_id}",
     response_model=Union[
@@ -100,10 +102,12 @@ async def update_medical_record(
     template_type: str,
     record_id: str,
     record: dict,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     if not template_type:
-        raise HTTPException(status_code=400, detail="Template type is required in the URL")
+        raise HTTPException(
+            status_code=400, detail="Template type is required in the URL"
+        )
 
     if template_type == "condition":
         return await update_condition_record(db, record_id, record)
@@ -113,16 +117,15 @@ async def update_medical_record(
         return await update_chronic_illness_record(db, record_id, record)
     elif template_type == "surgical":
         return await update_surgical_history_record(db, record_id, record)
-    elif template_type == "immunization": 
+    elif template_type == "immunization":
         return await update_immunization_record(db, record_id, record)
     else:
         raise HTTPException(status_code=400, detail="Invalid template type")
-    
+
+
 @router.delete("/{record_id}")
 @limiter.limit("10/second")
 async def delete_medical_record(
-    request: Request,
-    record_id: str,
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    request: Request, record_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     return await delete_medical_record_by_id(db, record_id)

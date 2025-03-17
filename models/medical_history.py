@@ -1,4 +1,3 @@
-# models/medical_templates.py
 from pydantic import Field
 from typing import Optional
 from datetime import date
