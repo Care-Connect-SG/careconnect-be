@@ -203,7 +203,6 @@ async def update_task(
 
     # Check if the update_series flag is present and true.
     if update_data.get("update_series"):
-        # Remove the flag from the payload so it isn't stored.
         update_data.pop("update_series")
         series_id = existing_task.get("series_id")
         if series_id:
@@ -251,7 +250,6 @@ async def update_task(
                 result = await db.tasks.update_one(
                     {"_id": ObjectId(task_id)}, {"$set": date_fields}
                 )
-                # Don't raise an error if date update fails, just continue
 
             # Retrieve the current task as the response
             updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
