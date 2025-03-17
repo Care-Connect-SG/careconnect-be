@@ -61,8 +61,9 @@ async def create_recurring_task(
     )
 
     # Convert end_recurring_date (a date) into a datetime with timezone info.
+    # Set it to the end of the day (23:59:59) to include all tasks on that day
     end_recurring_datetime = datetime.combine(
-        task_data.end_recurring_date, datetime.min.time(), tzinfo=timezone.utc
+        task_data.end_recurring_date, datetime.max.time(), tzinfo=timezone.utc
     )
 
     # Use provided series_id or generate a new one
