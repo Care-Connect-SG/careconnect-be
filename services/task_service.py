@@ -6,11 +6,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
-
-try:
-    from dateutil.relativedelta import relativedelta  # type: ignore
-except ImportError:
-    relativedelta = None
+from dateutil.relativedelta import relativedelta
 
 
 # Create Task

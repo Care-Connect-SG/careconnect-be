@@ -31,13 +31,28 @@ async def add_user_to_group(db, group_id: str, user_id: str):
     return {"res": f"User {user_id} added to group with id {group_id}"}
 
 
+async def get_user_groups(db, user_id: str):
+    try:
+        uid = ObjectId(user_id)
+    except errors.InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid user id format")
+    user = await db["users"].find_one({"_id": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    groups_cursor = db["groups"].find({"members": user_id})
+    groups = []
+    async for group in groups_cursor:
+        groups.append(group)
+    return groups
+
+
 async def get_all_groups(db):
     cursor = db["groups"].find({})
     groups = [group async for group in cursor]
     return groups
 
 
-async def get_group_by_id(db, group_id: str):
+async def get_group_by_id(db, group_id: str, user: dict = None):
     try:
         oid = ObjectId(group_id)
     except errors.InvalidId:
@@ -45,6 +60,13 @@ async def get_group_by_id(db, group_id: str):
     group = await db["groups"].find_one({"_id": oid})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
+    if user:
+        if user.get("role") != "Admin" and user.get("id") not in group.get(
+            "members", []
+        ):
+            raise HTTPException(
+                status_code=403, detail="Access forbidden to this group"
+            )
     return group
 
 
