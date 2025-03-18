@@ -149,7 +149,6 @@ async def get_tasks(
             {"task_details": {"$regex": search, "$options": "i"}},
         ]
 
-    # Determine the date range based on the provided date.
     if date:
         try:
             date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -168,7 +167,6 @@ async def get_tasks(
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    # Filter tasks by their start_date to match the toggled date.
     filters["start_date"] = {"$gte": start_of_day, "$lte": end_of_day}
 
     tasks = await db.tasks.find(filters).to_list(length=100)
