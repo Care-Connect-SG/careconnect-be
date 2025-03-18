@@ -83,11 +83,12 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
     )
 
     return {
+        "id": str(user["_id"]),
+        "name": user["name"],
+        "email": user["email"],
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "email": user["email"],
-        "name": user["name"],
     }
 
 
