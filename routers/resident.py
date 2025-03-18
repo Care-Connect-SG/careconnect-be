@@ -25,6 +25,23 @@ async def create_resident_record(
 
 
 @router.get(
+    "/getAllResidents",
+    response_model=List[RegistrationResponse],
+    response_model_by_alias=False,
+)
+@limiter.limit("100/minute")
+async def list_residents(
+    request: Request,
+    db=Depends(get_db),
+    nurse: Optional[str] = None,  # e.g. /residents?nurse=Alice
+):
+    if nurse:
+        return await get_all_residents_by_nurse(db, nurse)
+    else:
+        return await get_all_residents(db)
+
+
+@router.get(
     "/", response_model=List[RegistrationResponse], response_model_by_alias=False
 )
 @limiter.limit("100/minute")
