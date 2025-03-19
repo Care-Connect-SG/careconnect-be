@@ -551,11 +551,13 @@ async def reject_task_reassignment(
             detail="Only the requested nurse can reject the reassignment",
         )
 
-    # Update task with rejection details
+    # Update task with rejection details but maintain original status
     update_data = {
-        "status": TaskStatus.REASSIGNMENT_REJECTED,
         "reassignment_rejection_reason": rejection_reason,
         "reassignment_rejected_at": datetime.now(timezone.utc),
+        "reassignment_requested_to": None,
+        "reassignment_requested_by": None,
+        "reassignment_requested_at": None,
     }
 
     result = await db.tasks.update_one(

@@ -212,11 +212,6 @@ async def request_reassignment(
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    if current_user.get("role") != "Nurse":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can request task reassignment",
-        )
     updated_task = await request_task_reassignment(
         db, task_id, target_nurse_id, current_user["id"]
     )
@@ -236,11 +231,6 @@ async def accept_reassignment(
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    if current_user.get("role") != "Nurse":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can accept task reassignment",
-        )
     updated_task = await accept_task_reassignment(db, task_id, current_user["id"])
     return updated_task
 
@@ -259,11 +249,6 @@ async def reject_reassignment(
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    if current_user.get("role") != "Nurse":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can reject task reassignment",
-        )
     updated_task = await reject_task_reassignment(
         db, task_id, current_user["id"], rejection_reason
     )
