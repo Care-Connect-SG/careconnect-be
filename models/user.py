@@ -8,7 +8,6 @@ from models.base import ModelConfig, PyObjectId
 class Role(str, Enum):
     ADMIN = "Admin"
     NURSE = "Nurse"
-    FAMILY = "Family"
 
 
 class Gender(str, Enum):
@@ -26,6 +25,13 @@ class UserCreate(BaseModel):
     gender: Gender
     profile_picture: Optional[HttpUrl] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    contact_number: Optional[str] = None
+    organisation_rank: Optional[str] = None
+    gender: Optional[Gender] = None
 
 
 class UserPasswordUpdate(BaseModel):
