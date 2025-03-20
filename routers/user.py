@@ -4,6 +4,7 @@ from pydantic import EmailStr
 from db.connection import get_db
 from models.user import (
     UserCreate,
+    UserUpdate,
     UserResponse,
     Token,
     RefreshTokenRequest,
@@ -57,7 +58,7 @@ async def get_users(request: Request, email: Optional[str] = None, db=Depends(ge
 
 
 @router.get("/me", response_model=UserResponse, response_model_by_alias=False)
-@limiter.limit("10/minute")
+# @limiter.limit("10/minute")
 async def get_current_user_details(
     request: Request, current_user: Dict = Depends(get_current_user), db=Depends(get_db)
 ):
@@ -81,12 +82,13 @@ async def get_user(request: Request, user_id: str, db=Depends(get_db)):
 @router.put("/{user_id}", response_model=UserResponse, response_model_by_alias=False)
 @limiter.limit("10/minute")
 async def update_user_details(
-    request: Request, user_id: str, user_data: UserCreate, db=Depends(get_db)
+    request: Request, user_id: str, user_data: UserUpdate, db=Depends(get_db), current_user: Dict = Depends(get_current_user)
 ):
-    updated_user = await update_user(
-        db, user_id, user_data.model_dump(exclude_unset=True)
-    )
-    return updated_user
+    if (current_user["role"] == "Admin") or (current_user["id"] == user_id):
+        updated_user = await update_user(
+            db, user_id, user_data.model_dump(exclude_unset=True)
+        )
+        return updated_user
 
 
 @router.put("/me/password", status_code=status.HTTP_200_OK)

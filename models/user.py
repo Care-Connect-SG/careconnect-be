@@ -28,6 +28,13 @@ class UserCreate(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    contact_number: Optional[str] = None
+    organisation_rank: Optional[str] = None
+    gender: Optional[Gender] = None
+
+
 class UserPasswordUpdate(BaseModel):
     current_password: str = Field(..., description="The user's current password")
     new_password: str = Field(..., description="The new password")
