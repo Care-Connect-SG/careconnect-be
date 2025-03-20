@@ -1,37 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, Any, ClassVar
+from typing import Optional, Any
 from bson import ObjectId
-from pydantic_core import core_schema
-
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls,
-        _source_type: Any,
-        _handler: Any,
-    ) -> core_schema.CoreSchema:
-        return core_schema.json_or_python_schema(
-            json_schema=core_schema.str_schema(),
-            python_schema=core_schema.union_schema([
-                core_schema.is_instance_schema(ObjectId),
-                core_schema.chain_schema([
-                    core_schema.str_schema(),
-                    core_schema.no_info_plain_validator_function(cls.validate),
-                ]),
-            ]),
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                lambda x: str(x),
-                return_schema=core_schema.str_schema(),
-                when_used='json',
-            ),
-        )
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
+from models.base import PyObjectId, ModelConfig
 
 class ActivityBase(BaseModel):
     title: str
@@ -43,8 +14,8 @@ class ActivityBase(BaseModel):
     tags: Optional[str] = None
     visibility: bool = True
 
-    model_config = {
-        'json_schema_extra': {
+    model_config = ModelConfig(
+        json_schema_extra={
             'example': {
                 'title': 'Morning Exercise',
                 'description': 'Daily morning exercise session',
@@ -56,7 +27,7 @@ class ActivityBase(BaseModel):
                 'visibility': True
             }
         }
-    }
+    )
 
 class ActivityCreate(ActivityBase):
     pass
@@ -72,11 +43,7 @@ class Activity(ActivityBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    model_config = {
-        'arbitrary_types_allowed': True,
-        'populate_by_name': True,
-        'json_encoders': {ObjectId: str}
-    }
+    model_config = ModelConfig()
 
 class ActivityFilter(BaseModel):
     start_date: Optional[datetime] = None

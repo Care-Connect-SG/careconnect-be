@@ -1,73 +1,98 @@
 from datetime import datetime
 from typing import List, Optional
 from bson import ObjectId
+from fastapi import HTTPException
 from db.mongodb import get_database
-from models.activity import Activity, ActivityCreate
+from models.activity import Activity, ActivityCreate, ActivityUpdate
 
-class ActivityService:
-    collection_name = "activities"
-
-    @classmethod
-    async def create_activity(cls, activity: ActivityCreate) -> Activity:
-        db = await get_database()
-        activity_dict = activity.dict()
+async def create_activity(db, activity: ActivityCreate, user_id: str) -> Activity:
+    try:
+        activity_dict = activity.model_dump()
+        activity_dict["created_by"] = user_id
         activity_dict["created_at"] = datetime.utcnow()
         activity_dict["updated_at"] = datetime.utcnow()
         
-        result = await db[cls.collection_name].insert_one(activity_dict)
-        activity_dict["id"] = str(result.inserted_id)
-        return Activity(**activity_dict)
+        result = await db.activities.insert_one(activity_dict)
+        created_activity = await db.activities.find_one({"_id": result.inserted_id})
+        return Activity(**created_activity)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create activity: {str(e)}")
 
-    @classmethod
-    async def get_activities(
-        cls,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        category: Optional[str] = None,
-        location: Optional[str] = None
-    ) -> List[Activity]:
-        db = await get_database()
+async def list_activities(
+    db,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    category: Optional[str] = None,
+    tags: Optional[str] = None,
+    search: Optional[str] = None,
+    sort_by: str = "start_time",
+    sort_order: str = "asc"
+) -> List[Activity]:
+    try:
         query = {}
 
         if start_date:
-            query["start_date"] = {"$gte": start_date}
+            query["start_time"] = {"$gte": start_date}
         if end_date:
-            query["end_date"] = {"$lte": end_date}
+            query["end_time"] = {"$lte": end_date}
         if category:
             query["category"] = category
-        if location:
-            query["location"] = location
+        if tags:
+            query["tags"] = {"$regex": tags}
+        if search:
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"description": {"$regex": search, "$options": "i"}}
+            ]
 
-        cursor = db[cls.collection_name].find(query)
+        sort_direction = 1 if sort_order == "asc" else -1
+        cursor = db.activities.find(query).sort(sort_by, sort_direction)
         activities = await cursor.to_list(length=None)
-        return [Activity(**{**activity, "id": str(activity["_id"])}) for activity in activities]
+        return [Activity(**activity) for activity in activities]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list activities: {str(e)}")
 
-    @classmethod
-    async def get_activity_by_id(cls, activity_id: str) -> Optional[Activity]:
-        db = await get_database()
-        activity = await db[cls.collection_name].find_one({"_id": ObjectId(activity_id)})
-        if activity:
-            return Activity(**{**activity, "id": str(activity["_id"])})
-        return None
+async def get_activity(db, activity_id: str) -> Activity:
+    try:
+        activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+        if not activity:
+            raise HTTPException(status_code=404, detail="Activity not found")
+        return Activity(**activity)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Failed to get activity: {str(e)}")
 
-    @classmethod
-    async def update_activity(cls, activity_id: str, activity: ActivityCreate) -> Optional[Activity]:
-        db = await get_database()
-        activity_dict = activity.dict()
-        activity_dict["updated_at"] = datetime.utcnow()
+async def update_activity(db, activity_id: str, activity_update: ActivityUpdate) -> Activity:
+    try:
+        activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+        if not activity:
+            raise HTTPException(status_code=404, detail="Activity not found")
 
-        result = await db[cls.collection_name].update_one(
+        update_data = activity_update.model_dump(exclude_unset=True)
+        update_data["updated_at"] = datetime.utcnow()
+
+        await db.activities.update_one(
             {"_id": ObjectId(activity_id)},
-            {"$set": activity_dict}
+            {"$set": update_data}
         )
+        
+        updated_activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+        return Activity(**updated_activity)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Failed to update activity: {str(e)}")
 
-        if result.modified_count:
-            updated = await db[cls.collection_name].find_one({"_id": ObjectId(activity_id)})
-            return Activity(**{**updated, "id": str(updated["_id"])})
-        return None
+async def delete_activity(db, activity_id: str) -> dict:
+    try:
+        activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+        if not activity:
+            raise HTTPException(status_code=404, detail="Activity not found")
 
-    @classmethod
-    async def delete_activity(cls, activity_id: str) -> bool:
-        db = await get_database()
-        result = await db[cls.collection_name].delete_one({"_id": ObjectId(activity_id)})
-        return result.deleted_count > 0 
+        await db.activities.delete_one({"_id": ObjectId(activity_id)})
+        return {"message": "Activity deleted successfully"}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Failed to delete activity: {str(e)}") 

@@ -13,7 +13,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict:
     """
     Decodes and verifies the JWT token, returning the full user payload.
-    Expects the token payload to include at least "id", "sub", and "role".
+    Expects the token payload to include at least "id" and "sub".
     """
     return verify_token(
         token,
@@ -28,13 +28,13 @@ def require_roles(required_roles: List[str]):
     Dependency that ensures the user has one of the required roles.
     Returns the full user payload if the check passes.
     """
-
-    def dependency(user: Dict = Depends(get_current_user)) -> Dict:
-        if user.get("role") not in required_roles:
+    async def dependency(db: AsyncIOMotorDatabase = Depends(get_database), user: Dict = Depends(get_current_user)) -> Dict:
+        user_data = await db["users"].find_one({"_id": ObjectId(user["id"])})
+        if not user_data or user_data.get("role") not in required_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
             )
-        return user
+        return user_data
 
     return dependency
 
@@ -76,17 +76,16 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
         )
 
     access_token = create_access_token(
-        data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
+        data={"id": str(user["_id"]), "sub": user["email"]}
     )
     refresh_token = create_refresh_token(
-        data={"id": str(user["_id"]), "sub": user["email"], "role": user["role"]}
+        data={"id": str(user["_id"]), "sub": user["email"]}
     )
 
     return {
         "id": str(user["_id"]),
         "name": user["name"],
         "email": user["email"],
-        "role": user["role"],
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
