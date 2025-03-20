@@ -11,7 +11,7 @@ class ConditionRecord(ModelConfig):
     treating_physician: str
     treatment_details: str
     current_status: str
-    resident_id: Optional[str] = None
+    resident_id: Optional[PyObjectId] = None
 
 
 class AllergyRecord(ModelConfig):
@@ -21,7 +21,7 @@ class AllergyRecord(ModelConfig):
     date_first_noted: date
     severity: str
     management_notes: Optional[str] = None
-    resident_id: Optional[str] = None
+    resident_id: Optional[PyObjectId] = None
 
 
 class ChronicIllnessRecord(ModelConfig):
@@ -31,7 +31,7 @@ class ChronicIllnessRecord(ModelConfig):
     managing_physician: str
     current_treatment_plan: str
     monitoring_parameters: str
-    resident_id: Optional[str] = None
+    resident_id: Optional[PyObjectId] = None
 
 
 class SurgicalHistoryRecord(ModelConfig):
@@ -41,7 +41,7 @@ class SurgicalHistoryRecord(ModelConfig):
     surgeon: str
     hospital: str
     complications: Optional[str] = None
-    resident_id: Optional[str] = None
+    resident_id: Optional[PyObjectId] = None
 
 
 class ImmunizationRecord(ModelConfig):
@@ -50,4 +50,4 @@ class ImmunizationRecord(ModelConfig):
     date_administered: date
     administering_facility: str
     next_due_date: Optional[date] = None
-    resident_id: Optional[str] = None
+    resident_id: Optional[PyObjectId] = None

@@ -91,16 +91,18 @@ async def update_medical_record(
     if not record:
         raise HTTPException(status_code=400, detail="No update data provided")
 
+    record["resident_id"] = resident_id
+
     if template_type == "condition":
-        return await update_condition_record(db, record_id, resident_id, record)
+        return await update_condition_record(db, record_id, record)
     elif template_type == "allergy":
-        return await update_allergy_record(db, record_id, resident_id, record)
+        return await update_allergy_record(db, record_id, record)
     elif template_type == "chronic":
-        return await update_chronic_illness_record(db, record_id, resident_id, record)
+        return await update_chronic_illness_record(db, record_id, record)
     elif template_type == "surgical":
-        return await update_surgical_history_record(db, record_id, resident_id, record)
+        return await update_surgical_history_record(db, record_id, record)
     elif template_type == "immunization":
-        return await update_immunization_record(db, record_id, resident_id, record)
+        return await update_immunization_record(db, record_id, record)
     else:
         raise HTTPException(status_code=400, detail="Invalid template type")
 
