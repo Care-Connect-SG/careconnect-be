@@ -1,25 +1,29 @@
 from datetime import datetime
 from typing import List, Optional
+from fastapi import HTTPException, Request
 from bson import ObjectId
-from fastapi import HTTPException
-from db.mongodb import get_database
+from db.connection import get_db
 from models.activity import Activity, ActivityCreate, ActivityUpdate
+from services.user_service import get_user_role
 
-async def create_activity(db, activity: ActivityCreate, user_id: str) -> Activity:
+collection_name = "activities"
+
+async def create_activity(activity: ActivityCreate, user_id: str, request: Request) -> Activity:
     try:
+        db = await get_db(request)
         activity_dict = activity.model_dump()
         activity_dict["created_by"] = user_id
         activity_dict["created_at"] = datetime.utcnow()
         activity_dict["updated_at"] = datetime.utcnow()
         
-        result = await db.activities.insert_one(activity_dict)
-        created_activity = await db.activities.find_one({"_id": result.inserted_id})
+        result = await db[collection_name].insert_one(activity_dict)
+        created_activity = await db[collection_name].find_one({"_id": result.inserted_id})
         return Activity(**created_activity)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create activity: {str(e)}")
 
-async def list_activities(
-    db,
+async def get_activities(
+    request: Request,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     category: Optional[str] = None,
@@ -29,6 +33,7 @@ async def list_activities(
     sort_order: str = "asc"
 ) -> List[Activity]:
     try:
+        db = await get_db(request)
         query = {}
 
         if start_date:
@@ -46,52 +51,73 @@ async def list_activities(
             ]
 
         sort_direction = 1 if sort_order == "asc" else -1
-        cursor = db.activities.find(query).sort(sort_by, sort_direction)
+        cursor = db[collection_name].find(query).sort(sort_by, sort_direction)
         activities = await cursor.to_list(length=None)
         return [Activity(**activity) for activity in activities]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list activities: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch activities: {str(e)}")
 
-async def get_activity(db, activity_id: str) -> Activity:
+async def get_activity_by_id(activity_id: str, request: Request) -> Activity:
     try:
-        activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
+        db = await get_db(request)
+        activity = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
         if not activity:
             raise HTTPException(status_code=404, detail="Activity not found")
         return Activity(**activity)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-        raise HTTPException(status_code=500, detail=f"Failed to get activity: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch activity: {str(e)}")
 
-async def update_activity(db, activity_id: str, activity_update: ActivityUpdate) -> Activity:
+async def update_activity(activity_id: str, activity_update: ActivityUpdate, user_id: str, request: Request) -> Activity:
     try:
-        activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
-        if not activity:
+        db = await get_db(request)
+        existing = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
+        if not existing:
             raise HTTPException(status_code=404, detail="Activity not found")
+        
+        # Get user role
+        user_role = await get_user_role(db, request.headers.get("Authorization", "").split(" ")[1])
+        
+        # Allow if user is Admin or if user is the creator
+        if user_role != "Admin" and existing["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this activity")
 
         update_data = activity_update.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.utcnow()
 
-        await db.activities.update_one(
+        result = await db[collection_name].update_one(
             {"_id": ObjectId(activity_id)},
             {"$set": update_data}
         )
         
-        updated_activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
-        return Activity(**updated_activity)
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Activity update failed")
+            
+        updated = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
+        return Activity(**{**updated, "id": str(updated["_id"])})
+
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Failed to update activity: {str(e)}")
 
-async def delete_activity(db, activity_id: str) -> dict:
+async def delete_activity(activity_id: str, user_id: str, request: Request) -> bool:
     try:
-        activity = await db.activities.find_one({"_id": ObjectId(activity_id)})
-        if not activity:
+        db = await get_db(request)
+        existing = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
+        if not existing:
             raise HTTPException(status_code=404, detail="Activity not found")
-
-        await db.activities.delete_one({"_id": ObjectId(activity_id)})
-        return {"message": "Activity deleted successfully"}
+            
+        # Get user role
+        user_role = await get_user_role(db, request.headers.get("Authorization", "").split(" ")[1])
+        
+        # Allow if user is Admin or if user is the creator
+        if user_role != "Admin" and existing["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this activity")
+            
+        result = await db[collection_name].delete_one({"_id": ObjectId(activity_id)})
+        return result.deleted_count > 0
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

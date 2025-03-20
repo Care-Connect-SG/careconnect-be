@@ -6,14 +6,14 @@ from models.user import UserTagResponse, UserResponse, UserCreate, UserPasswordU
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.security import OAuth2PasswordBearer
 from typing import List, Dict, Optional
+from db.connection import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict:
     """
-    Decodes and verifies the JWT token, returning the full user payload.
-    Expects the token payload to include at least "id" and "sub".
+    Decodes and verifies the JWT token, returning the user ID and email.
     """
     return verify_token(
         token,
@@ -23,31 +23,52 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict:
     )
 
 
-def require_roles(required_roles: List[str]):
-    """
-    Dependency that ensures the user has one of the required roles.
-    Returns the full user payload if the check passes.
-    """
-    async def dependency(db: AsyncIOMotorDatabase = Depends(get_database), user: Dict = Depends(get_current_user)) -> Dict:
-        user_data = await db["users"].find_one({"_id": ObjectId(user["id"])})
-        if not user_data or user_data.get("role") not in required_roles:
+class RoleChecker:
+    def __init__(self, required_roles: List[str]):
+        self.required_roles = required_roles
+
+    async def __call__(
+        self,
+        db: AsyncIOMotorDatabase = Depends(get_db),
+        user: Dict = Depends(get_current_user)
+    ) -> Dict:
+        user_data = await db["users"].find_one(
+            {"_id": ObjectId(user["id"])},
+            {"role": 1}
+        )
+        if not user_data or user_data.get("role") not in self.required_roles:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
             )
-        return user_data
+        return user
 
-    return dependency
+def require_roles(required_roles: List[str]):
+    return RoleChecker(required_roles)
 
 
-def get_user_role(token: str = Depends(oauth2_scheme)):
-    """Extracts the user's role from the JWT token."""
+async def get_user_role(
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    token: str = Depends(oauth2_scheme)
+) -> str:
+    """Fetches the user's role from the database using the token's user ID."""
     user_data = verify_token(
         token,
         credentials_exception=HTTPException(
-            status_code=401, detail="Invalid credentials"
+            status_code=401,
+            detail="Invalid credentials"
         ),
     )
-    return user_data.get("role")
+    user = await db["users"].find_one(
+        {"_id": ObjectId(user_data["id"])},
+        {"role": 1}
+    )
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+    return user.get("role")
 
 
 # Register User
@@ -86,6 +107,7 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
         "id": str(user["_id"]),
         "name": user["name"],
         "email": user["email"],
+        "role": user["role"],
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
@@ -103,6 +125,9 @@ async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Convert _id to string for the response
+    user["id"] = str(user["_id"])
+    del user["_id"]
     return UserResponse(**user)
 
 

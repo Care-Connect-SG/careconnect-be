@@ -9,7 +9,7 @@ from models.user import (
     RefreshTokenRequest,
     UserPasswordUpdate,
 )
-from auth.jwttoken import refresh_access_token
+from auth.jwttoken import refresh_access_token, create_refresh_token
 from services.user_service import (
     get_user_role,
     get_user_by_email_service,
@@ -61,8 +61,14 @@ async def get_users(request: Request, email: Optional[str] = None, db=Depends(ge
 async def get_current_user_details(
     request: Request, current_user: Dict = Depends(get_current_user), db=Depends(get_db)
 ):
-    user = await get_user_by_id(db, current_user["id"])
-    return user
+    try:
+        user = await get_user_by_id(db, current_user["id"])
+        return user
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch user details: {str(e)}"
+        )
 
 
 @router.get("/me/role")
@@ -120,4 +126,23 @@ async def get_user_by_email(request: Request, email: EmailStr, db=Depends(get_db
 
 @router.post("/refresh-token")
 async def refresh_token_endpoint(payload: RefreshTokenRequest):
-    return refresh_access_token(payload.refresh_token)
+    try:
+        result = refresh_access_token(payload.refresh_token)
+        # Create a new refresh token
+        new_refresh_token = create_refresh_token(
+            data={"id": result["id"], "sub": result["sub"], "role": result["role"]}
+        )
+        return {
+            "access_token": result["access_token"],
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+            "id": result["id"],
+            "role": result["role"]
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to refresh token: {str(e)}"
+        )

@@ -1,8 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, Any
-from bson import ObjectId
-from models.base import PyObjectId, ModelConfig
+from typing import Optional
+from models.base import ModelConfig, PyObjectId
 
 class ActivityBase(BaseModel):
     title: str
@@ -14,8 +13,8 @@ class ActivityBase(BaseModel):
     tags: Optional[str] = None
     visibility: bool = True
 
-    model_config = ModelConfig(
-        json_schema_extra={
+    model_config = {
+        'json_schema_extra': {
             'example': {
                 'title': 'Morning Exercise',
                 'description': 'Daily morning exercise session',
@@ -27,7 +26,7 @@ class ActivityBase(BaseModel):
                 'visibility': True
             }
         }
-    )
+    }
 
 class ActivityCreate(ActivityBase):
     pass
@@ -37,13 +36,11 @@ class ActivityUpdate(ActivityBase):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
 
-class Activity(ActivityBase):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+class Activity(ActivityBase, ModelConfig):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     created_by: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    model_config = ModelConfig()
 
 class ActivityFilter(BaseModel):
     start_date: Optional[datetime] = None
