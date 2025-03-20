@@ -23,7 +23,10 @@ async def create_condition_record(
         )
 
     insert_data = record.dict()
-    # Convert all Python date fields to datetime
+    if not insert_data.get("resident_id"):
+        raise HTTPException(status_code=400, detail="Resident ID is required")
+
+    # Convert all Python date fields to datetime (midnight)
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
@@ -47,6 +50,9 @@ async def create_allergy_record(db: AsyncIOMotorDatabase, data: dict) -> Allergy
         )
 
     insert_data = record.dict()
+    if not insert_data.get("resident_id"):
+        raise HTTPException(status_code=400, detail="Resident ID is required")
+
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
@@ -72,6 +78,9 @@ async def create_chronic_illness_record(
         )
 
     insert_data = record.dict()
+    if not insert_data.get("resident_id"):
+        raise HTTPException(status_code=400, detail="Resident ID is required")
+
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
@@ -99,6 +108,9 @@ async def create_surgical_history_record(
         )
 
     insert_data = record.dict()
+    if not insert_data.get("resident_id"):
+        raise HTTPException(status_code=400, detail="Resident ID is required")
+
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
@@ -126,6 +138,9 @@ async def create_immunization_record(
         )
 
     insert_data = record.dict()
+    if not insert_data.get("resident_id"):
+        raise HTTPException(status_code=400, detail="Resident ID is required")
+
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
@@ -352,3 +367,48 @@ async def delete_medical_record_by_id(db: AsyncIOMotorDatabase, record_id: str) 
     raise HTTPException(
         status_code=404, detail="Record not found in any medical record collection"
     )
+
+
+async def get_medical_records_by_resident(
+    db: AsyncIOMotorDatabase, resident_id: str
+) -> List[
+    Union[
+        ConditionRecord,
+        AllergyRecord,
+        ChronicIllnessRecord,
+        SurgicalHistoryRecord,
+        ImmunizationRecord,
+    ]
+]:
+    try:
+        conditions = []
+        async for record in db["conditions"].find({"resident_id": resident_id}):
+            record["_id"] = str(record["_id"])
+            conditions.append(ConditionRecord.parse_obj(record))
+
+        allergies = []
+        async for record in db["allergies"].find({"resident_id": resident_id}):
+            record["_id"] = str(record["_id"])
+            allergies.append(AllergyRecord.parse_obj(record))
+
+        chronic = []
+        async for record in db["chronic_illnesses"].find({"resident_id": resident_id}):
+            record["_id"] = str(record["_id"])
+            chronic.append(ChronicIllnessRecord.parse_obj(record))
+
+        surgical = []
+        async for record in db["surgical_history"].find({"resident_id": resident_id}):
+            record["_id"] = str(record["_id"])
+            surgical.append(SurgicalHistoryRecord.parse_obj(record))
+
+        immunizations = []
+        async for record in db["immunizations"].find({"resident_id": resident_id}):
+            record["_id"] = str(record["_id"])
+            immunizations.append(ImmunizationRecord.parse_obj(record))
+
+        return conditions + allergies + chronic + surgical + immunizations
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching medical records: {e}"
+        )
