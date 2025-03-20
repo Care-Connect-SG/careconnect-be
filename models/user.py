@@ -8,7 +8,6 @@ from models.base import ModelConfig, PyObjectId
 class Role(str, Enum):
     ADMIN = "Admin"
     NURSE = "Nurse"
-    FAMILY = "Family"
 
 
 class Gender(str, Enum):
