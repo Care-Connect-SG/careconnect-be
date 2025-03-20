@@ -110,7 +110,7 @@ async def delete_user_by_id(request: Request, user_id: str, db=Depends(get_db)):
 
 
 @router.get("/email/{email}", status_code=status.HTTP_200_OK)
-@limiter.limit("5/second")
+@limiter.limit("10/minute")
 async def get_user_by_email(request: Request, email: EmailStr, db=Depends(get_db)):
     user = await get_user_by_email_service(db, email)
     if not user:

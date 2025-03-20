@@ -9,7 +9,8 @@ class TaskStatus(str, Enum):
     ASSIGNED = "Assigned"
     COMPLETED = "Completed"
     DELAYED = "Delayed"
-    REQUEST_REASSIGNMENT = "Request Reassignment"
+    REASSIGNMENT_REQUESTED = "Reassignment Requested"
+    REASSIGNMENT_REJECTED = "Reassignment Rejected"
 
 
 class TaskPriority(str, Enum):
@@ -48,6 +49,11 @@ class TaskCreate(BaseModel):
     remind_prior: Optional[int] = None
     is_ai_generated: bool = False
     assigned_to: PyObjectId
+    reassignment_requested_to: Optional[PyObjectId] = None
+    reassignment_requested_by: Optional[PyObjectId] = None
+    reassignment_requested_at: Optional[datetime] = None
+    reassignment_rejection_reason: Optional[str] = None
+    reassignment_rejected_at: Optional[datetime] = None
     series_id: Optional[str] = None
 
 
@@ -67,6 +73,11 @@ class TaskUpdate(BaseModel):
     remind_prior: Optional[int] = None
     is_ai_generated: Optional[bool] = None
     assigned_to: Optional[PyObjectId] = None
+    reassignment_requested_to: Optional[PyObjectId] = None
+    reassignment_requested_by: Optional[PyObjectId] = None
+    reassignment_requested_at: Optional[datetime] = None
+    reassignment_rejection_reason: Optional[str] = None
+    reassignment_rejected_at: Optional[datetime] = None
     update_series: Optional[bool] = False
 
 
@@ -93,4 +104,11 @@ class TaskResponse(ModelConfig):
     resident_name: str = "Unknown"
     resident_room: str = "Unknown"
     created_by: PyObjectId
+    reassignment_requested_to: Optional[PyObjectId] = None
+    reassignment_requested_to_name: Optional[str] = "Unknown"
+    reassignment_requested_by: Optional[PyObjectId] = None
+    reassignment_requested_by_name: Optional[str] = "Unknown"
+    reassignment_requested_at: Optional[datetime] = None
+    reassignment_rejection_reason: Optional[str] = None
+    reassignment_rejected_at: Optional[datetime] = None
     series_id: Optional[str] = None
