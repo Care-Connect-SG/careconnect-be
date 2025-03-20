@@ -141,7 +141,7 @@ async def get_tasks(
         filters["category"] = category
     if search:
         filters["$or"] = [
-            {"task_detail": {"$regex": search, "$options": "i"}},
+            {"task_title": {"$regex": search, "$options": "i"}},
             {"task_details": {"$regex": search, "$options": "i"}},
         ]
 
