@@ -4,8 +4,10 @@ astroid==3.2.4
 bcrypt==4.2.1
 black==24.8.0
 Brotli==1.1.0
+certifi==2025.1.31
 cffi==1.17.1
 click==8.1.8
+cloudinary==1.43.0
 colorama==0.4.6
 cryptography==44.0.1
 cssselect2==0.8.0
@@ -56,6 +58,7 @@ tinycss2==1.4.0
 tomli==2.2.1
 tomlkit==0.13.2
 typing_extensions==4.12.2
+urllib3==2.3.0
 uvicorn==0.33.0
 weasyprint==60.2
 webencodings==0.5.1
