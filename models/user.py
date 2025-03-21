@@ -8,7 +8,6 @@ from models.base import ModelConfig, PyObjectId
 class Role(str, Enum):
     ADMIN = "Admin"
     NURSE = "Nurse"
-    FAMILY = "Family"
 
 
 class Gender(str, Enum):
@@ -24,8 +23,16 @@ class UserCreate(BaseModel):
     role: Role
     organisation_rank: Optional[str] = None
     gender: Gender
-    profile_picture: Optional[HttpUrl] = None
+    profile_picture: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    contact_number: Optional[str] = None
+    organisation_rank: Optional[str] = None
+    profile_picture: Optional[str] = None
+    gender: Optional[Gender] = None
 
 
 class UserPasswordUpdate(BaseModel):
@@ -40,6 +47,7 @@ class UserResponse(ModelConfig):
     contact_number: Optional[str] = None
     role: Role
     organisation_rank: Optional[str] = None
+    profile_picture: Optional[str] = None
     gender: Gender
 
 
@@ -53,7 +61,6 @@ class Token(BaseModel):
     id: str
     name: str
     email: str
-    role: str
     access_token: str
     refresh_token: str
     token_type: str
