@@ -1,7 +1,7 @@
-from fastapi import Depends, APIRouter, Request, status, HTTPException
+from fastapi import Depends, APIRouter, Request, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
-from models.task import TaskResponse, TaskCreate, TaskUpdate, TaskStatus
+from models.task import TaskResponse, TaskCreate, TaskUpdate
 from services.task_service import (
     create_task,
     get_tasks,
@@ -267,11 +267,7 @@ async def handle_task_self_route(
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Nurse"])),
 ):
-    if current_user.get("role") != "Nurse":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only nurses can handle tasks themselves",
-        )
     updated_task = await handle_task_self(db, task_id, current_user["id"])
     return updated_task
