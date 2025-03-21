@@ -1,6 +1,5 @@
-from fastapi import Depends, APIRouter, HTTPException, status, Request
+from fastapi import Depends, APIRouter, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import EmailStr
 from db.connection import get_db
 from models.user import (
     UserCreate,
