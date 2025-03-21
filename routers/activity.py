@@ -1,23 +1,26 @@
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, status
 from typing import List, Optional
 from datetime import datetime
-from models.activity import Activity, ActivityCreate, ActivityUpdate, ActivityFilter
+from models.activity import ActivityResponse, ActivityCreate, ActivityUpdate
 from services import activity_service
 from services.user_service import get_current_user
+from utils.limiter import limiter
 
-router = APIRouter(prefix="/api/activities", tags=["activities"])
+router = APIRouter(prefix="/activities", tags=["Activities"])
 
 
-@router.post("/", response_model=Activity)
+@router.post("/", response_model=ActivityResponse, response_model_by_alias=False)
+@limiter.limit("10/minute")
 async def create_activity(
     activity: ActivityCreate,
     current_user: dict = Depends(get_current_user),
-    request: Request = None
+    request: Request = None,
 ):
     return await activity_service.create_activity(activity, current_user["id"], request)
 
 
-@router.get("/", response_model=List[Activity])
+@router.get("/", response_model=List[ActivityResponse], response_model_by_alias=False)
+@limiter.limit("100/minute")
 async def list_activities(
     request: Request,
     start_date: Optional[datetime] = None,
@@ -36,29 +39,41 @@ async def list_activities(
         tags=tags,
         search=search,
         sort_by=sort_by,
-        sort_order=sort_order
+        sort_order=sort_order,
     )
 
 
-@router.get("/{activity_id}", response_model=Activity)
+@router.get(
+    "/{activity_id}", response_model=ActivityResponse, response_model_by_alias=False
+)
+@limiter.limit("100/minute")
 async def get_activity(activity_id: str, request: Request):
     return await activity_service.get_activity_by_id(activity_id, request)
 
 
-@router.put("/{activity_id}", response_model=Activity)
+@router.put(
+    "/{activity_id}", response_model=ActivityResponse, response_model_by_alias=False
+)
+@limiter.limit("100/minute")
 async def update_activity(
     activity_id: str,
     activity_update: ActivityUpdate,
     current_user: dict = Depends(get_current_user),
-    request: Request = None
+    request: Request = None,
 ):
-    return await activity_service.update_activity(activity_id, activity_update, current_user["id"], request)
+
+    return await activity_service.update_activity(
+        activity_id, activity_update, current_user, request
+    )
 
 
-@router.delete("/{activity_id}")
+@router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 async def delete_activity(
     activity_id: str,
     current_user: dict = Depends(get_current_user),
-    request: Request = None
+    request: Request = None,
 ):
-    return await activity_service.delete_activity(activity_id, current_user["id"], request)
+    return await activity_service.delete_activity(
+        activity_id, current_user["id"], request
+    )

@@ -12,6 +12,31 @@ from models.medical_history import (
 )
 
 
+async def create_medical_history_by_template(
+    db: AsyncIOMotorDatabase, template_type: str, resident_id: str, record: dict
+):
+    if not template_type:
+        raise HTTPException(status_code=400, detail="Template type is required")
+
+    if not record:
+        raise HTTPException(status_code=400, detail="Record data is required")
+
+    record["resident_id"] = resident_id
+
+    if template_type == "condition":
+        return await create_condition_record(db, record)
+    elif template_type == "allergy":
+        return await create_allergy_record(db, record)
+    elif template_type == "chronic":
+        return await create_chronic_illness_record(db, record)
+    elif template_type == "surgical":
+        return await create_surgical_history_record(db, record)
+    elif template_type == "immunization":
+        return await create_immunization_record(db, record)
+    else:
+        raise HTTPException(status_code=400, detail="Invalid template type")
+
+
 async def create_condition_record(
     db: AsyncIOMotorDatabase, data: dict
 ) -> ConditionRecord:
@@ -197,6 +222,35 @@ async def get_all_medical_records(db: AsyncIOMotorDatabase) -> List[
         raise HTTPException(
             status_code=500, detail=f"Error fetching medical records: {e}"
         )
+
+
+async def update_medical_record_by_type(
+    db: AsyncIOMotorDatabase,
+    template_type: str,
+    resident_id: str,
+    record_id: str,
+    record: dict,
+):
+    if not template_type:
+        raise HTTPException(status_code=400, detail="Template type is required")
+
+    if not record:
+        raise HTTPException(status_code=400, detail="No update data provided")
+
+    record["resident_id"] = resident_id
+
+    if template_type == "condition":
+        return await update_condition_record(db, record_id, record)
+    elif template_type == "allergy":
+        return await update_allergy_record(db, record_id, record)
+    elif template_type == "chronic":
+        return await update_chronic_illness_record(db, record_id, record)
+    elif template_type == "surgical":
+        return await update_surgical_history_record(db, record_id, record)
+    elif template_type == "immunization":
+        return await update_immunization_record(db, record_id, record)
+    else:
+        raise HTTPException(status_code=400, detail="Invalid template type")
 
 
 async def update_condition_record(
