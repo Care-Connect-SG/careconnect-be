@@ -7,6 +7,7 @@ from services.user_service import get_current_user
 
 router = APIRouter(prefix="/api/activities", tags=["activities"])
 
+
 @router.post("/", response_model=Activity)
 async def create_activity(
     activity: ActivityCreate,
@@ -14,6 +15,7 @@ async def create_activity(
     request: Request = None
 ):
     return await activity_service.create_activity(activity, current_user["id"], request)
+
 
 @router.get("/", response_model=List[Activity])
 async def list_activities(
@@ -24,7 +26,7 @@ async def list_activities(
     tags: Optional[str] = None,
     search: Optional[str] = None,
     sort_by: str = Query("start_time", regex="^(start_time|title|category)$"),
-    sort_order: str = Query("asc", regex="^(asc|desc)$")
+    sort_order: str = Query("asc", regex="^(asc|desc)$"),
 ):
     return await activity_service.get_activities(
         request=request,
@@ -37,9 +39,11 @@ async def list_activities(
         sort_order=sort_order
     )
 
+
 @router.get("/{activity_id}", response_model=Activity)
 async def get_activity(activity_id: str, request: Request):
     return await activity_service.get_activity_by_id(activity_id, request)
+
 
 @router.put("/{activity_id}", response_model=Activity)
 async def update_activity(
@@ -50,10 +54,11 @@ async def update_activity(
 ):
     return await activity_service.update_activity(activity_id, activity_update, current_user["id"], request)
 
+
 @router.delete("/{activity_id}")
 async def delete_activity(
     activity_id: str,
     current_user: dict = Depends(get_current_user),
     request: Request = None
 ):
-    return await activity_service.delete_activity(activity_id, current_user["id"], request) 
+    return await activity_service.delete_activity(activity_id, current_user["id"], request)

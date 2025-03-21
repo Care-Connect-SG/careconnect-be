@@ -15,7 +15,7 @@ async def create_activity(activity: ActivityCreate, user_id: str, request: Reque
         activity_dict["created_by"] = user_id
         activity_dict["created_at"] = datetime.utcnow()
         activity_dict["updated_at"] = datetime.utcnow()
-        
+
         result = await db[collection_name].insert_one(activity_dict)
         created_activity = await db[collection_name].find_one({"_id": result.inserted_id})
         return Activity(**created_activity)
@@ -75,10 +75,10 @@ async def update_activity(activity_id: str, activity_update: ActivityUpdate, use
         existing = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
         if not existing:
             raise HTTPException(status_code=404, detail="Activity not found")
-        
+
         # Get user role
         user_role = await get_user_role(db, request.headers.get("Authorization", "").split(" ")[1])
-        
+
         # Allow if user is Admin or if user is the creator
         if user_role != "Admin" and existing["created_by"] != user_id:
             raise HTTPException(status_code=403, detail="Not authorized to update this activity")
@@ -90,10 +90,10 @@ async def update_activity(activity_id: str, activity_update: ActivityUpdate, use
             {"_id": ObjectId(activity_id)},
             {"$set": update_data}
         )
-        
+
         if result.modified_count == 0:
             raise HTTPException(status_code=400, detail="Activity update failed")
-            
+
         updated = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
         return Activity(**{**updated, "id": str(updated["_id"])})
 
@@ -108,17 +108,17 @@ async def delete_activity(activity_id: str, user_id: str, request: Request) -> b
         existing = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
         if not existing:
             raise HTTPException(status_code=404, detail="Activity not found")
-            
+
         # Get user role
         user_role = await get_user_role(db, request.headers.get("Authorization", "").split(" ")[1])
-        
+
         # Allow if user is Admin or if user is the creator
         if user_role != "Admin" and existing["created_by"] != user_id:
             raise HTTPException(status_code=403, detail="Not authorized to delete this activity")
-            
+
         result = await db[collection_name].delete_one({"_id": ObjectId(activity_id)})
         return result.deleted_count > 0
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-        raise HTTPException(status_code=500, detail=f"Failed to delete activity: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to delete activity: {str(e)}")
