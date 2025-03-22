@@ -23,7 +23,7 @@ class ReportCreate(BaseModel):
     reporter: UserTagResponse
     primary_resident: Optional[ResidentTagResponse] = None
     involved_residents: List[ResidentTagResponse] = Field(default_factory=list)
-    involved_caregivers: List[UserTagResponse] = Field(default_factory=list) 
+    involved_caregivers: List[UserTagResponse] = Field(default_factory=list)
     report_content: List[ReportSectionContent]
     status: ReportStatus
     reference_report_id: Optional[PyObjectId] = None
