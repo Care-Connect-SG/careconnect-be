@@ -51,8 +51,8 @@ class UserResponse(ModelConfig):
     gender: Gender
 
 
-class UserTagResponse(BaseModel):
-    id: Optional[PyObjectId] = None
+class UserTagResponse(ModelConfig):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str
     role: str
 

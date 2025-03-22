@@ -229,9 +229,8 @@ async def get_caregiver_tags(search_key: str, limit: int, db) -> List[UserTagRes
 
     caregivers = []
     async for record in cursor:
-        record["id"] = str(record["_id"])
-        del record["_id"]
-        caregivers.append(record)
+        caregivers.append(UserTagResponse(**record))
+
     return caregivers
 
 

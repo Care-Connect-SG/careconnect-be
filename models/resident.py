@@ -37,5 +37,5 @@ class RegistrationResponse(ModelConfig):
 
 
 class ResidentTagResponse(ModelConfig):
-    id: Optional[PyObjectId] = None
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str
