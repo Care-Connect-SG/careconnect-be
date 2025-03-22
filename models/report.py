@@ -26,6 +26,7 @@ class ReportCreate(BaseModel):
     involved_caregivers: List[UserTagResponse] = Field(default_factory=list)
     report_content: List[ReportSectionContent]
     status: ReportStatus
+    reference_report_id: Optional[PyObjectId] = None
 
 
 class ReportResponse(ReportCreate, ModelConfig):
