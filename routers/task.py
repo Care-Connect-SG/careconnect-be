@@ -1,7 +1,7 @@
-from fastapi import Depends, APIRouter, Request, status, HTTPException
+from fastapi import Depends, APIRouter, Request, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
-from models.task import TaskResponse, TaskCreate, TaskUpdate, TaskStatus
+from models.task import TaskResponse, TaskCreate, TaskUpdate
 from services.task_service import (
     create_task,
     get_tasks,
@@ -13,6 +13,10 @@ from services.task_service import (
     reopen_task,
     duplicate_task,
     download_task,
+    request_task_reassignment,
+    accept_task_reassignment,
+    reject_task_reassignment,
+    handle_task_self,
 )
 from utils.limiter import limiter
 from services.user_service import require_roles, get_current_user
@@ -192,3 +196,78 @@ async def download_task_route(
         media_type="text/plain",
         headers={"Content-Disposition": f"attachment; filename=task-{task_id}.txt"},
     )
+
+
+@router.post(
+    "/{task_id}/request-reassignment",
+    summary="Request task reassignment to another nurse",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def request_reassignment(
+    request: Request,
+    task_id: str,
+    target_nurse_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    updated_task = await request_task_reassignment(
+        db, task_id, target_nurse_id, current_user["id"]
+    )
+    return updated_task
+
+
+@router.post(
+    "/{task_id}/accept-reassignment",
+    summary="Accept a task reassignment request",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def accept_reassignment(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    updated_task = await accept_task_reassignment(db, task_id, current_user["id"])
+    return updated_task
+
+
+@router.post(
+    "/{task_id}/reject-reassignment",
+    summary="Reject a task reassignment request",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def reject_reassignment(
+    request: Request,
+    task_id: str,
+    rejection_reason: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    updated_task = await reject_task_reassignment(
+        db, task_id, current_user["id"], rejection_reason
+    )
+    return updated_task
+
+
+@router.post(
+    "/{task_id}/handle-self",
+    summary="Handle the task yourself after rejection",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("10/minute")
+async def handle_task_self_route(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Nurse"])),
+):
+    updated_task = await handle_task_self(db, task_id, current_user["id"])
+    return updated_task

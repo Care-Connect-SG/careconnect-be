@@ -47,7 +47,10 @@ async def add_user(
 async def get_groups(
     request: Request,
     db=Depends(get_db),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
+    if user.get("role") != "Admin":
+        return await get_user_groups(db, user.get("id"))
     return await get_all_groups(db)
 
 
@@ -57,7 +60,10 @@ async def get_group_by_id_route(
     request: Request,
     group_id: str,
     db=Depends(get_db),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
+    if user.get("role") != "Admin":
+        return await get_group_by_id(db, group_id, user)
     return await get_group_by_id(db, group_id)
 
 

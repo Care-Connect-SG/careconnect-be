@@ -1,16 +1,12 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
 from bson import ObjectId
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
-
-try:
-    from dateutil.relativedelta import relativedelta  # type: ignore
-except ImportError:
-    relativedelta = None
+from dateutil.relativedelta import relativedelta
 
 
 # Create Task
@@ -61,12 +57,17 @@ async def create_recurring_task(
     )
 
     # Convert end_recurring_date (a date) into a datetime with timezone info.
+    # Set it to the end of the day (23:59:59) to include all tasks on that day
     end_recurring_datetime = datetime.combine(
-        task_data.end_recurring_date, datetime.min.time(), tzinfo=timezone.utc
+        task_data.end_recurring_date, datetime.max.time(), tzinfo=timezone.utc
     )
 
-    # Generate a unique series_id using ObjectId.
-    series_id = str(ObjectId())
+    # Use provided series_id or generate a new one
+    series_id = (
+        task_data.series_id
+        if hasattr(task_data, "series_id") and task_data.series_id
+        else str(ObjectId())
+    )
 
     while current_start_date <= end_recurring_datetime:
         occurrence_task_data = task_data.copy(deep=True)
@@ -140,11 +141,10 @@ async def get_tasks(
         filters["category"] = category
     if search:
         filters["$or"] = [
-            {"task_detail": {"$regex": search, "$options": "i"}},
+            {"task_title": {"$regex": search, "$options": "i"}},
             {"task_details": {"$regex": search, "$options": "i"}},
         ]
 
-    # Determine the date range based on the provided date.
     if date:
         try:
             date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -163,7 +163,6 @@ async def get_tasks(
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    # Filter tasks by their start_date to match the toggled date.
     filters["start_date"] = {"$gte": start_of_day, "$lte": end_of_day}
 
     tasks = await db.tasks.find(filters).to_list(length=100)
@@ -199,18 +198,55 @@ async def update_task(
 
     # Check if the update_series flag is present and true.
     if update_data.get("update_series"):
-        # Remove the flag from the payload so it isn't stored.
         update_data.pop("update_series")
         series_id = existing_task.get("series_id")
         if series_id:
-            result = await db.tasks.update_many(
-                {"series_id": series_id}, {"$set": update_data}
-            )
-            if result.matched_count == 0:
-                raise HTTPException(
-                    status_code=404, detail="No tasks found for the series"
+            # Separate date-related fields from other fields
+            date_fields = {}
+            non_date_fields = {}
+
+            for field, value in update_data.items():
+                if field in [
+                    "start_date",
+                    "due_date",
+                    "end_recurring_date",
+                    "recurring",
+                ]:
+                    date_fields[field] = value
+                else:
+                    non_date_fields[field] = value
+
+            # Ensure all dates are in UTC
+            if "start_date" in date_fields:
+                date_fields["start_date"] = date_fields["start_date"].replace(
+                    tzinfo=timezone.utc
                 )
-            # Optionally, retrieve one task (for example, the current task) as the response.
+            if "due_date" in date_fields:
+                date_fields["due_date"] = date_fields["due_date"].replace(
+                    tzinfo=timezone.utc
+                )
+            if "end_recurring_date" in date_fields:
+                date_fields["end_recurring_date"] = date_fields[
+                    "end_recurring_date"
+                ].replace(tzinfo=timezone.utc)
+
+            # Update non-date fields for all tasks in the series
+            if non_date_fields:
+                result = await db.tasks.update_many(
+                    {"series_id": series_id}, {"$set": non_date_fields}
+                )
+                if result.matched_count == 0:
+                    raise HTTPException(
+                        status_code=404, detail="No tasks found for the series"
+                    )
+
+            # Update date fields only for the current task
+            if date_fields:
+                result = await db.tasks.update_one(
+                    {"_id": ObjectId(task_id)}, {"$set": date_fields}
+                )
+
+            # Retrieve the current task as the response
             updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
             return TaskResponse(**updated_task_doc)
 
@@ -218,12 +254,10 @@ async def update_task(
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
-
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Task not found")
     if result.modified_count == 0:
-        raise HTTPException(status_code=400, detail="No changes detected in update")
+        raise HTTPException(status_code=404, detail="Task not found")
 
+    # Retrieve the updated task
     updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
     return TaskResponse(**updated_task_doc)
 
@@ -336,6 +370,20 @@ async def enrich_task_with_names(db, task: dict) -> dict:
     else:
         task["resident_name"] = "Unknown"
 
+    if "reassignment_requested_to" in task and task["reassignment_requested_to"]:
+        task["reassignment_requested_to_name"] = await get_assigned_to_name(
+            db, str(task["reassignment_requested_to"])
+        )
+    else:
+        task["reassignment_requested_to_name"] = "Unknown"
+
+    if "reassignment_requested_by" in task and task["reassignment_requested_by"]:
+        task["reassignment_requested_by_name"] = await get_assigned_to_name(
+            db, str(task["reassignment_requested_by"])
+        )
+    else:
+        task["reassignment_requested_by_name"] = "Unknown"
+
     return task
 
 
@@ -403,3 +451,165 @@ Due Date: {task_dict["due_date"]}{finished_at_text}
 """
 
     return text_content.encode("utf-8")
+
+
+async def request_task_reassignment(
+    db: AsyncIOMotorDatabase,
+    task_id: str,
+    target_nurse_id: str,
+    requesting_nurse_id: str,
+) -> TaskResponse:
+    # Get the existing task
+    task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Verify the requesting nurse is currently assigned to the task
+    if str(task.get("assigned_to")) != requesting_nurse_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the currently assigned nurse can request reassignment",
+        )
+
+    # Update task with reassignment request details
+    update_data = {
+        "status": TaskStatus.REASSIGNMENT_REQUESTED,
+        "reassignment_requested_to": ObjectId(target_nurse_id),
+        "reassignment_requested_by": ObjectId(requesting_nurse_id),
+        "reassignment_requested_at": datetime.now(timezone.utc),
+    }
+
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Get the updated task with enriched data
+    updated_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    updated_task = await enrich_task_with_names(db, updated_task)
+    updated_task = await enrich_task_with_room(db, updated_task)
+
+    return TaskResponse(**updated_task)
+
+
+async def accept_task_reassignment(
+    db: AsyncIOMotorDatabase, task_id: str, accepting_nurse_id: str
+) -> TaskResponse:
+    # Get the existing task
+    task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Verify the accepting nurse is the one requested
+    if str(task.get("reassignment_requested_to")) != accepting_nurse_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the requested nurse can accept the reassignment",
+        )
+
+    # Update task with new assignment
+    update_data = {
+        "status": TaskStatus.ASSIGNED,
+        "assigned_to": ObjectId(accepting_nurse_id),
+        "reassignment_requested_to": None,
+        "reassignment_requested_by": None,
+        "reassignment_requested_at": None,
+    }
+
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Get the updated task with enriched data
+    updated_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    updated_task = await enrich_task_with_names(db, updated_task)
+    updated_task = await enrich_task_with_room(db, updated_task)
+
+    return TaskResponse(**updated_task)
+
+
+async def reject_task_reassignment(
+    db: AsyncIOMotorDatabase,
+    task_id: str,
+    rejecting_nurse_id: str,
+    rejection_reason: str,
+) -> TaskResponse:
+    # Get the existing task
+    task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Verify the rejecting nurse is the one requested
+    if str(task.get("reassignment_requested_to")) != rejecting_nurse_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the requested nurse can reject the reassignment",
+        )
+
+    # Update task with rejection details but maintain original status
+    update_data = {
+        "reassignment_rejection_reason": rejection_reason,
+        "reassignment_rejected_at": datetime.now(timezone.utc),
+        "reassignment_requested_to": None,
+        "reassignment_requested_by": None,
+        "reassignment_requested_at": None,
+    }
+
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Get the updated task with enriched data
+    updated_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    updated_task = await enrich_task_with_names(db, updated_task)
+    updated_task = await enrich_task_with_room(db, updated_task)
+
+    return TaskResponse(**updated_task)
+
+
+async def handle_task_self(
+    db: AsyncIOMotorDatabase, task_id: str, nurse_id: str
+) -> TaskResponse:
+    # Get the existing task
+    task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Verify the nurse is the original assignee
+    if str(task.get("assigned_to")) != nurse_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the original assignee can handle the task themselves",
+        )
+
+    # Update task to be handled by the original nurse
+    update_data = {
+        "status": TaskStatus.ASSIGNED,
+        "reassignment_requested_to": None,
+        "reassignment_requested_by": None,
+        "reassignment_requested_at": None,
+        "reassignment_rejection_reason": None,
+        "reassignment_rejected_at": None,
+    }
+
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": update_data}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Get the updated task with enriched data
+    updated_task = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    updated_task = await enrich_task_with_names(db, updated_task)
+    updated_task = await enrich_task_with_room(db, updated_task)
+
+    return TaskResponse(**updated_task)
