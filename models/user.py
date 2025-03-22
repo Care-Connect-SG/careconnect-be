@@ -52,7 +52,7 @@ class UserResponse(ModelConfig):
 
 
 class UserTagResponse(BaseModel):
-    id: str
+    id: Optional[PyObjectId] = None
     name: str
     role: str
 

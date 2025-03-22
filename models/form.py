@@ -17,7 +17,7 @@ class FormElement(BaseModel):
 class FormCreate(BaseModel):
     title: str
     description: str
-    creator_id: str
+    creator_id: Optional[PyObjectId] = None
     json_content: List[FormElement]
     status: str
 

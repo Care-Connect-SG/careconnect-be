@@ -12,9 +12,9 @@ router = APIRouter(prefix="/activities", tags=["Activities"])
 @router.post("/", response_model=ActivityResponse, response_model_by_alias=False)
 @limiter.limit("10/minute")
 async def create_activity(
+    request: Request,
     activity: ActivityCreate,
     current_user: dict = Depends(get_current_user),
-    request: Request = None,
 ):
     return await activity_service.create_activity(activity, current_user["id"], request)
 
