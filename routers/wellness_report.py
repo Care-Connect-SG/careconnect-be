@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, status
 from typing import List
 from models.wellness_report import WellnessReportCreate, WellnessReportResponse
 from services.wellness_report_service import (
@@ -16,7 +16,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=WellnessReportResponse)
+@router.post("/", response_model=WellnessReportResponse, response_model_by_alias=False)
 @limiter.limit("10/minute")
 async def add_report(
     request: Request, resident_id: str, report: WellnessReportCreate, db=Depends(get_db)
@@ -24,13 +24,17 @@ async def add_report(
     return await create_wellness_report(db, resident_id, report)
 
 
-@router.get("/", response_model=List[WellnessReportResponse])
+@router.get(
+    "/", response_model=List[WellnessReportResponse], response_model_by_alias=False
+)
 @limiter.limit("100/minute")
 async def list_reports(request: Request, resident_id: str, db=Depends(get_db)):
     return await get_reports_by_resident(db, resident_id)
 
 
-@router.get("/{report_id}", response_model=WellnessReportResponse)
+@router.get(
+    "/{report_id}", response_model=WellnessReportResponse, response_model_by_alias=False
+)
 @limiter.limit("100/minute")
 async def get_report(
     request: Request, resident_id: str, report_id: str, db=Depends(get_db)
@@ -38,7 +42,9 @@ async def get_report(
     return await get_wellness_report_by_id(db, resident_id, report_id)
 
 
-@router.put("/{report_id}", response_model=WellnessReportResponse)
+@router.put(
+    "/{report_id}", response_model=WellnessReportResponse, response_model_by_alias=False
+)
 @limiter.limit("10/minute")
 async def update_report(
     request: Request,
@@ -50,7 +56,7 @@ async def update_report(
     return await update_wellness_report(db, resident_id, report_id, update_data)
 
 
-@router.delete("/{report_id}")
+@router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("10/minute")
 async def delete_report(
     request: Request, resident_id: str, report_id: str, db=Depends(get_db)

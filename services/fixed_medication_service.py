@@ -1,8 +1,7 @@
 import datetime
 from typing import List, Optional
-from models.fixed_medication import FixedMedication
+from models.health_record.fixed_medication import FixedMedication
 
-# Fixed medication database (pre-loaded)
 MEDICATIONS_DB = [
     FixedMedication(
         medication_id="1234567",
@@ -60,16 +59,13 @@ MEDICATIONS_DB = [
         expiry_date=datetime.date(2026, 6, 25),
         instructions="Monitor blood sugar levels regularly",
     ),
-    # Add 7 more medications...
 ]
 
 
-# Function to get all medications
 def get_all_medications() -> List[FixedMedication]:
     return MEDICATIONS_DB
 
 
-# Function to search for medication by barcode ID
 def get_medication_by_id(medication_id: str) -> Optional[FixedMedication]:
     for med in MEDICATIONS_DB:
         if med.medication_id == medication_id:

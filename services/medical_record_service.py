@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi import HTTPException
 from bson import ObjectId
 from typing import List, Union
-from models.medical_history import (
+from models.health_record.medical_record import (
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
@@ -51,7 +51,6 @@ async def create_condition_record(
     if not insert_data.get("resident_id"):
         raise HTTPException(status_code=400, detail="Resident ID is required")
 
-    # Convert all Python date fields to datetime (midnight)
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime

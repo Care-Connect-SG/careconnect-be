@@ -2,14 +2,14 @@ from typing import Union, List
 from fastapi import APIRouter, Depends, Request, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
-from models.medical_history import (
+from models.health_record.medical_record import (
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
     SurgicalHistoryRecord,
     ImmunizationRecord,
 )
-from services.medical_history_service import (
+from services.medical_record_service import (
     create_medical_history_by_template,
     update_medical_record_by_type,
     delete_medical_record_by_id,
