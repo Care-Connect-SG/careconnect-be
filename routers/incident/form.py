@@ -2,6 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Request
 from db.connection import get_db
 from models.form import FormCreate, FormResponse
+from services.user_service import get_current_user
 from services.form_service import (
     create_form,
     get_forms,
@@ -17,8 +18,13 @@ router = APIRouter(prefix="/incident/forms", tags=["Incident Management Subsyste
 
 @router.post("/", summary="Create a new incident form", response_model=str)
 @limiter.limit("10/minute")
-async def create_new_form(request: Request, form: FormCreate, db=Depends(get_db)):
-    return await create_form(form, db)
+async def create_new_form(
+    request: Request,
+    form: FormCreate,
+    db=Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return await create_form(form, db, current_user["id"])
 
 
 @router.get(

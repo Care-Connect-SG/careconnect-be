@@ -18,7 +18,7 @@ class ReportSectionContent(BaseModel):
 
 
 class ReportCreate(BaseModel):
-    form_id: str
+    form_id: Optional[PyObjectId] = None
     form_name: str
     reporter: UserTagResponse
     primary_resident: Optional[ResidentTagResponse] = None
