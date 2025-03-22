@@ -6,6 +6,7 @@ from services.careplan_service import (
     get_careplans_by_resident,
     get_careplan_by_id,
     update_careplan,
+    delete_careplan,
 )
 from db.connection import get_db
 from utils.limiter import limiter
@@ -45,3 +46,11 @@ async def update_careplan_record(
     db=Depends(get_db),
 ):
     return await update_careplan(db, resident_id, careplan_id, update_data)
+
+
+@router.delete("/{careplan_id}")
+@limiter.limit("10/minute")
+async def delete_careplan_record(
+    request: Request, resident_id: str, careplan_id: str, db=Depends(get_db)
+):
+    return await delete_careplan(db, resident_id, careplan_id)

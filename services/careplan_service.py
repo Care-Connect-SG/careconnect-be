@@ -83,3 +83,19 @@ async def update_careplan(
     del updated_record["_id"]
 
     return updated_record
+
+
+from fastapi import HTTPException
+from bson import ObjectId
+
+
+async def delete_careplan(db, resident_id: str, careplan_id: str):
+    if not ObjectId.is_valid(careplan_id):
+        raise HTTPException(status_code=400, detail="Invalid careplan ID")
+
+    result = await db["careplans"].delete_one({"_id": ObjectId(careplan_id)})
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Care plan not found")
+
+    return {"message": "Care plan deleted successfully"}
