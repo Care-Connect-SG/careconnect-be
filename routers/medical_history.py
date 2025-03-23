@@ -67,9 +67,8 @@ async def create_medical_record(
     else:
         raise HTTPException(status_code=400, detail="Invalid template type")
 
-
 @router.put(
-    "/{template_type}/{record_id}",
+    "/edit/{record_id}",
     response_model=Union[
         ConditionRecord,
         AllergyRecord,
@@ -80,29 +79,46 @@ async def create_medical_record(
     response_model_by_alias=False,
 )
 @limiter.limit("10/second")
-async def update_medical_record(
+async def edit_medical_record(
     request: Request,
-    template_type: str,
     record_id: str,
     record: dict,
     resident_id: str = Query(..., description="Resident ID linked to the record"),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
+    """
+    A single endpoint to edit any medical record type without requiring a
+    template_type in the URL. We determine the record's type by searching
+    each collection for the given _id.
+    """
+    if not ObjectId.is_valid(record_id):
+        raise HTTPException(status_code=400, detail="Invalid record ID")
+
     if not record:
         raise HTTPException(status_code=400, detail="No update data provided")
 
-    if template_type == "condition":
-        return await update_condition_record(db, record_id, resident_id, record)
-    elif template_type == "allergy":
-        return await update_allergy_record(db, record_id, resident_id, record)
-    elif template_type == "chronic":
-        return await update_chronic_illness_record(db, record_id, resident_id, record)
-    elif template_type == "surgical":
-        return await update_surgical_history_record(db, record_id, resident_id, record)
-    elif template_type == "immunization":
-        return await update_immunization_record(db, record_id, resident_id, record)
-    else:
-        raise HTTPException(status_code=400, detail="Invalid template type")
+    # 1. Check 'conditions' collection
+    if await db["conditions"].find_one({"_id": ObjectId(record_id)}):
+        return await update_condition_record(db, record_id, record)
+
+    # 2. Check 'allergies' collection
+    if await db["allergies"].find_one({"_id": ObjectId(record_id)}):
+        return await update_allergy_record(db, record_id, record)
+
+    # 3. Check 'chronic_illnesses' collection
+    if await db["chronic_illnesses"].find_one({"_id": ObjectId(record_id)}):
+        return await update_chronic_illness_record(db, record_id, record)
+
+    # 4. Check 'surgical_history' collection
+    if await db["surgical_history"].find_one({"_id": ObjectId(record_id)}):
+        return await update_surgical_history_record(db, record_id, record)
+
+    # 5. Check 'immunizations' collection
+    if await db["immunizations"].find_one({"_id": ObjectId(record_id)}):
+        return await update_immunization_record(db, record_id, record)
+
+    # If we reach here, the record_id was not found in any collection:
+    raise HTTPException(status_code=404, detail="Medical record not found")
 
 
 @router.delete("/{record_id}")
