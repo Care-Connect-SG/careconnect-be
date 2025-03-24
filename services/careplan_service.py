@@ -1,7 +1,7 @@
 import datetime
 from fastapi import HTTPException
 from bson import ObjectId
-from models.health_record.careplan import CarePlanCreate, CarePlanResponse
+from models.careplan import CarePlanCreate, CarePlanResponse
 
 
 async def create_careplan(db, resident_id: str, careplan_data: CarePlanCreate):
@@ -10,8 +10,11 @@ async def create_careplan(db, resident_id: str, careplan_data: CarePlanCreate):
     except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
-    careplan_dict = careplan_data.dict()
-    careplan_dict["resident_id"] = resident_id
+    careplan_dict = {
+        k: v for k, v in careplan_data.dict().items() if k != "id" and v is not None
+    }
+
+    careplan_dict["resident_id"] = ObjectId(resident_id)
 
     if "created_date" in careplan_dict and isinstance(
         careplan_dict["created_date"], datetime.date
@@ -32,8 +35,10 @@ async def get_careplans_by_resident(db, resident_id: str):
     except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
+    resident_obj_id = ObjectId(resident_id)
     careplans = []
-    cursor = db["careplans"].find({"resident_id": resident_id})
+
+    cursor = db["careplans"].find({"resident_id": resident_obj_id})
     async for record in cursor:
         careplans.append(CarePlanResponse(**record))
 
@@ -61,7 +66,12 @@ async def update_careplan(
     except:
         raise HTTPException(status_code=400, detail="Invalid careplan ID")
 
-    update_dict = update_data.dict(exclude_unset=True)
+    update_dict = {
+        k: v
+        for k, v in update_data.dict(exclude_unset=True).items()
+        if k != "id" and v is not None
+    }
+
     if "created_date" in update_dict and isinstance(
         update_dict["created_date"], datetime.date
     ):

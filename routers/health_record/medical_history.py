@@ -1,15 +1,15 @@
 from typing import Union, List
 from fastapi import APIRouter, Depends, Request, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from db.connection import get_db
-from models.health_record.medical_record import (
+from db.connection import get_resident_db
+from models.medical_history import (
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
     SurgicalHistoryRecord,
     ImmunizationRecord,
 )
-from services.medical_record_service import (
+from services.medical_history_service import (
     create_medical_history_by_template,
     update_medical_record_by_type,
     delete_medical_record_by_id,
@@ -37,10 +37,10 @@ async def create_medical_record(
     template_type: str,
     record: dict,
     resident_id: str = Query(..., description="Resident ID linked to the record"),
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
 ):
     return await create_medical_history_by_template(
-        db, template_type, record, resident_id
+        db, template_type, resident_id, record
     )
 
 
@@ -62,7 +62,7 @@ async def update_medical_record(
     record_id: str,
     record: dict,
     resident_id: str = Query(..., description="Resident ID linked to the record"),
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
 ):
     return await update_medical_record_by_type(
         db, template_type, resident_id, record_id, record
@@ -72,7 +72,9 @@ async def update_medical_record(
 @router.delete("/{record_id}")
 @limiter.limit("10/second")
 async def delete_medical_record(
-    request: Request, record_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
+    request: Request,
+    record_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
 ):
     return await delete_medical_record_by_id(db, record_id)
 
@@ -92,6 +94,8 @@ async def delete_medical_record(
 )
 @limiter.limit("10/second")
 async def get_medical_records_by_resident_endpoint(
-    request: Request, resident_id: str, db: AsyncIOMotorDatabase = Depends(get_db)
+    request: Request,
+    resident_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
 ):
     return await get_medical_records_by_resident(db, resident_id)

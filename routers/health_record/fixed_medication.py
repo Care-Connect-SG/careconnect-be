@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import List
-from models.health_record.fixed_medication import FixedMedication
+from models.fixed_medication import FixedMedication
 from services.fixed_medication_service import get_all_medications, get_medication_by_id
 
 router = APIRouter(prefix="/fixedmedications", tags=["Fixed Medications"])
@@ -8,7 +8,6 @@ router = APIRouter(prefix="/fixedmedications", tags=["Fixed Medications"])
 
 @router.get("/", response_model=List[FixedMedication], response_model_by_alias=False)
 async def list_medications():
-    """Retrieve all stored medications (fixed database)"""
     return get_all_medications()
 
 
@@ -16,5 +15,4 @@ async def list_medications():
     "/{medication_id}", response_model=FixedMedication, response_model_by_alias=False
 )
 async def get_medication(medication_id: str):
-    """Retrieve medication details by scanning the barcode"""
     return await get_medication_by_id(medication_id)

@@ -15,7 +15,7 @@ class MedicationCreate(BaseModel):
 
 class MedicationResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    resident_id: str
+    resident_id: Optional[PyObjectId] = None
     medication_name: str
     dosage: str
     frequency: str

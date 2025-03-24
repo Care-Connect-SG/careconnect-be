@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, status
-from models.health_record.medication import MedicationCreate, MedicationResponse
+from models.medication import MedicationCreate, MedicationResponse
 from typing import List
 from services.medication_service import (
     create_medication,

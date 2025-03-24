@@ -14,7 +14,7 @@ async def create_activity(
     try:
         db = await get_db(request)
         activity_dict = activity.model_dump()
-        activity_dict["created_by"] = user_id
+        activity_dict["created_by"] = ObjectId(user_id)
         activity_dict["created_at"] = datetime.utcnow()
         activity_dict["updated_at"] = datetime.utcnow()
 
@@ -101,7 +101,7 @@ async def update_activity(
 
         if (
             current_user["role"] != "Admin"
-            and existing["created_by"] != current_user["id"]
+            and str(existing["created_by"]) != current_user["id"]
         ):
             raise HTTPException(
                 status_code=403, detail="Not authorized to update this activity"
@@ -144,7 +144,7 @@ async def delete_activity(
 
         if (
             current_user["role"] != "Admin"
-            and existing["created_by"] != current_user["id"]
+            and str(existing["created_by"]) != current_user["id"]
         ):
             raise HTTPException(
                 status_code=403, detail="Not authorized to delete this activity"

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, status
-from models.health_record.careplan import CarePlanCreate, CarePlanResponse
+from models.careplan import CarePlanCreate, CarePlanResponse
 from typing import List
 from services.careplan_service import (
     create_careplan,

@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi import HTTPException
 from bson import ObjectId
 from typing import List, Union
-from models.health_record.medical_record import (
+from models.medical_history import (
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
@@ -21,7 +21,7 @@ async def create_medical_history_by_template(
     if not record:
         raise HTTPException(status_code=400, detail="Record data is required")
 
-    record["resident_id"] = resident_id
+    record["resident_id"] = ObjectId(resident_id)
 
     if template_type == "condition":
         return await create_condition_record(db, record)
@@ -47,9 +47,17 @@ async def create_condition_record(
             status_code=400, detail=f"Error parsing condition record: {e}"
         )
 
-    insert_data = record.dict()
+    insert_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
     if not insert_data.get("resident_id"):
         raise HTTPException(status_code=400, detail="Resident ID is required")
+
+    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
+        insert_data["resident_id"]
+    ):
+        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
 
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
@@ -61,7 +69,7 @@ async def create_condition_record(
     new_record = await db["conditions"].find_one({"_id": result.inserted_id})
     if not new_record:
         raise HTTPException(status_code=500, detail="Failed to create condition record")
-    new_record["_id"] = str(new_record["_id"])
+
     return ConditionRecord.parse_obj(new_record)
 
 
@@ -73,9 +81,17 @@ async def create_allergy_record(db: AsyncIOMotorDatabase, data: dict) -> Allergy
             status_code=400, detail=f"Error parsing allergy record: {e}"
         )
 
-    insert_data = record.dict()
+    insert_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
     if not insert_data.get("resident_id"):
         raise HTTPException(status_code=400, detail="Resident ID is required")
+
+    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
+        insert_data["resident_id"]
+    ):
+        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
 
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
@@ -87,7 +103,7 @@ async def create_allergy_record(db: AsyncIOMotorDatabase, data: dict) -> Allergy
     new_record = await db["allergies"].find_one({"_id": result.inserted_id})
     if not new_record:
         raise HTTPException(status_code=500, detail="Failed to create allergy record")
-    new_record["_id"] = str(new_record["_id"])
+
     return AllergyRecord.parse_obj(new_record)
 
 
@@ -101,9 +117,17 @@ async def create_chronic_illness_record(
             status_code=400, detail=f"Error parsing chronic illness record: {e}"
         )
 
-    insert_data = record.dict()
+    insert_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
     if not insert_data.get("resident_id"):
         raise HTTPException(status_code=400, detail="Resident ID is required")
+
+    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
+        insert_data["resident_id"]
+    ):
+        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
 
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
@@ -117,7 +141,7 @@ async def create_chronic_illness_record(
         raise HTTPException(
             status_code=500, detail="Failed to create chronic illness record"
         )
-    new_record["_id"] = str(new_record["_id"])
+
     return ChronicIllnessRecord.parse_obj(new_record)
 
 
@@ -131,9 +155,17 @@ async def create_surgical_history_record(
             status_code=400, detail=f"Error parsing surgical history record: {e}"
         )
 
-    insert_data = record.dict()
+    insert_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
     if not insert_data.get("resident_id"):
         raise HTTPException(status_code=400, detail="Resident ID is required")
+
+    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
+        insert_data["resident_id"]
+    ):
+        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
 
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
@@ -147,7 +179,7 @@ async def create_surgical_history_record(
         raise HTTPException(
             status_code=500, detail="Failed to create surgical history record"
         )
-    new_record["_id"] = str(new_record["_id"])
+
     return SurgicalHistoryRecord.parse_obj(new_record)
 
 
@@ -161,9 +193,17 @@ async def create_immunization_record(
             status_code=400, detail=f"Error parsing immunization record: {e}"
         )
 
-    insert_data = record.dict()
+    insert_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
     if not insert_data.get("resident_id"):
         raise HTTPException(status_code=400, detail="Resident ID is required")
+
+    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
+        insert_data["resident_id"]
+    ):
+        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
 
     for field, value in insert_data.items():
         if isinstance(value, datetime.date) and not isinstance(
@@ -177,7 +217,7 @@ async def create_immunization_record(
         raise HTTPException(
             status_code=500, detail="Failed to create immunization record"
         )
-    new_record["_id"] = str(new_record["_id"])
+
     return ImmunizationRecord.parse_obj(new_record)
 
 
@@ -193,27 +233,22 @@ async def get_all_medical_records(db: AsyncIOMotorDatabase) -> List[
     try:
         conditions = []
         async for record in db["conditions"].find():
-            record["_id"] = str(record["_id"])
             conditions.append(ConditionRecord.parse_obj(record))
 
         allergies = []
         async for record in db["allergies"].find():
-            record["_id"] = str(record["_id"])
             allergies.append(AllergyRecord.parse_obj(record))
 
         chronic = []
         async for record in db["chronic_illnesses"].find():
-            record["_id"] = str(record["_id"])
             chronic.append(ChronicIllnessRecord.parse_obj(record))
 
         surgical = []
         async for record in db["surgical_history"].find():
-            record["_id"] = str(record["_id"])
             surgical.append(SurgicalHistoryRecord.parse_obj(record))
 
         immunizations = []
         async for record in db["immunizations"].find():
-            record["_id"] = str(record["_id"])
             immunizations.append(ImmunizationRecord.parse_obj(record))
 
         return conditions + allergies + chronic + surgical + immunizations
@@ -236,7 +271,10 @@ async def update_medical_record_by_type(
     if not record:
         raise HTTPException(status_code=400, detail="No update data provided")
 
-    record["resident_id"] = resident_id
+    if ObjectId.is_valid(resident_id):
+        record["resident_id"] = ObjectId(resident_id)
+    else:
+        record["resident_id"] = resident_id
 
     if template_type == "condition":
         return await update_condition_record(db, record_id, record)
@@ -261,12 +299,22 @@ async def update_condition_record(
         raise HTTPException(
             status_code=400, detail=f"Error parsing condition record: {e}"
         )
-    update_data = record.dict()
+
+    update_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
+    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
+        update_data["resident_id"]
+    ):
+        update_data["resident_id"] = ObjectId(update_data["resident_id"])
+
     for field, value in update_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
         ):
             update_data[field] = datetime.datetime.combine(value, datetime.time.min)
+
     result = await db["conditions"].update_one(
         {"_id": ObjectId(record_id)}, {"$set": update_data}
     )
@@ -274,10 +322,11 @@ async def update_condition_record(
         existing = await db["conditions"].find_one({"_id": ObjectId(record_id)})
         if not existing:
             raise HTTPException(status_code=404, detail="Condition record not found")
+
     new_record = await db["conditions"].find_one({"_id": ObjectId(record_id)})
     if not new_record:
         raise HTTPException(status_code=404, detail="Condition record not found")
-    new_record["_id"] = str(new_record["_id"])
+
     return ConditionRecord.parse_obj(new_record)
 
 
@@ -290,12 +339,22 @@ async def update_allergy_record(
         raise HTTPException(
             status_code=400, detail=f"Error parsing allergy record: {e}"
         )
-    update_data = record.dict()
+
+    update_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
+    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
+        update_data["resident_id"]
+    ):
+        update_data["resident_id"] = ObjectId(update_data["resident_id"])
+
     for field, value in update_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
         ):
             update_data[field] = datetime.datetime.combine(value, datetime.time.min)
+
     result = await db["allergies"].update_one(
         {"_id": ObjectId(record_id)}, {"$set": update_data}
     )
@@ -303,10 +362,11 @@ async def update_allergy_record(
         existing = await db["allergies"].find_one({"_id": ObjectId(record_id)})
         if not existing:
             raise HTTPException(status_code=404, detail="Allergy record not found")
+
     new_record = await db["allergies"].find_one({"_id": ObjectId(record_id)})
     if not new_record:
         raise HTTPException(status_code=404, detail="Allergy record not found")
-    new_record["_id"] = str(new_record["_id"])
+
     return AllergyRecord.parse_obj(new_record)
 
 
@@ -319,12 +379,22 @@ async def update_chronic_illness_record(
         raise HTTPException(
             status_code=400, detail=f"Error parsing chronic illness record: {e}"
         )
-    update_data = record.dict()
+
+    update_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
+    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
+        update_data["resident_id"]
+    ):
+        update_data["resident_id"] = ObjectId(update_data["resident_id"])
+
     for field, value in update_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
         ):
             update_data[field] = datetime.datetime.combine(value, datetime.time.min)
+
     result = await db["chronic_illnesses"].update_one(
         {"_id": ObjectId(record_id)}, {"$set": update_data}
     )
@@ -334,10 +404,11 @@ async def update_chronic_illness_record(
             raise HTTPException(
                 status_code=404, detail="Chronic illness record not found"
             )
+
     new_record = await db["chronic_illnesses"].find_one({"_id": ObjectId(record_id)})
     if not new_record:
         raise HTTPException(status_code=404, detail="Chronic illness record not found")
-    new_record["_id"] = str(new_record["_id"])
+
     return ChronicIllnessRecord.parse_obj(new_record)
 
 
@@ -350,12 +421,22 @@ async def update_surgical_history_record(
         raise HTTPException(
             status_code=400, detail=f"Error parsing surgical history record: {e}"
         )
-    update_data = record.dict()
+
+    update_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
+    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
+        update_data["resident_id"]
+    ):
+        update_data["resident_id"] = ObjectId(update_data["resident_id"])
+
     for field, value in update_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
         ):
             update_data[field] = datetime.datetime.combine(value, datetime.time.min)
+
     result = await db["surgical_history"].update_one(
         {"_id": ObjectId(record_id)}, {"$set": update_data}
     )
@@ -365,10 +446,11 @@ async def update_surgical_history_record(
             raise HTTPException(
                 status_code=404, detail="Surgical history record not found"
             )
+
     new_record = await db["surgical_history"].find_one({"_id": ObjectId(record_id)})
     if not new_record:
         raise HTTPException(status_code=404, detail="Surgical history record not found")
-    new_record["_id"] = str(new_record["_id"])
+
     return SurgicalHistoryRecord.parse_obj(new_record)
 
 
@@ -381,12 +463,22 @@ async def update_immunization_record(
         raise HTTPException(
             status_code=400, detail=f"Error parsing immunization record: {e}"
         )
-    update_data = record.dict()
+
+    update_data = {
+        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
+    }
+
+    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
+        update_data["resident_id"]
+    ):
+        update_data["resident_id"] = ObjectId(update_data["resident_id"])
+
     for field, value in update_data.items():
         if isinstance(value, datetime.date) and not isinstance(
             value, datetime.datetime
         ):
             update_data[field] = datetime.datetime.combine(value, datetime.time.min)
+
     result = await db["immunizations"].update_one(
         {"_id": ObjectId(record_id)}, {"$set": update_data}
     )
@@ -394,10 +486,11 @@ async def update_immunization_record(
         existing = await db["immunizations"].find_one({"_id": ObjectId(record_id)})
         if not existing:
             raise HTTPException(status_code=404, detail="Immunization record not found")
+
     new_record = await db["immunizations"].find_one({"_id": ObjectId(record_id)})
     if not new_record:
         raise HTTPException(status_code=404, detail="Immunization record not found")
-    new_record["_id"] = str(new_record["_id"])
+
     return ImmunizationRecord.parse_obj(new_record)
 
 
@@ -434,29 +527,38 @@ async def get_medical_records_by_resident(
     ]
 ]:
     try:
+
+        query = {
+            "$or": [
+                {"resident_id": resident_id},
+                {
+                    "resident_id": (
+                        ObjectId(resident_id)
+                        if ObjectId.is_valid(resident_id)
+                        else None
+                    )
+                },
+            ]
+        }
+
         conditions = []
-        async for record in db["conditions"].find({"resident_id": resident_id}):
-            record["_id"] = str(record["_id"])
+        async for record in db["conditions"].find(query):
             conditions.append(ConditionRecord.parse_obj(record))
 
         allergies = []
-        async for record in db["allergies"].find({"resident_id": resident_id}):
-            record["_id"] = str(record["_id"])
+        async for record in db["allergies"].find(query):
             allergies.append(AllergyRecord.parse_obj(record))
 
         chronic = []
-        async for record in db["chronic_illnesses"].find({"resident_id": resident_id}):
-            record["_id"] = str(record["_id"])
+        async for record in db["chronic_illnesses"].find(query):
             chronic.append(ChronicIllnessRecord.parse_obj(record))
 
         surgical = []
-        async for record in db["surgical_history"].find({"resident_id": resident_id}):
-            record["_id"] = str(record["_id"])
+        async for record in db["surgical_history"].find(query):
             surgical.append(SurgicalHistoryRecord.parse_obj(record))
 
         immunizations = []
-        async for record in db["immunizations"].find({"resident_id": resident_id}):
-            record["_id"] = str(record["_id"])
+        async for record in db["immunizations"].find(query):
             immunizations.append(ImmunizationRecord.parse_obj(record))
 
         return conditions + allergies + chronic + surgical + immunizations

@@ -1,10 +1,11 @@
 import datetime
 from typing import List, Optional
-from models.health_record.fixed_medication import FixedMedication
+from fastapi import HTTPException
+from models.fixed_medication import FixedMedication
 
-MEDICATIONS_DB = [
+FIXED_MEDICATIONS_DATA = [
     FixedMedication(
-        medication_id="1234567",
+        id="1234567",
         medication_name="Aspirin",
         dosage="100mg",
         frequency="Twice a day",
@@ -12,7 +13,7 @@ MEDICATIONS_DB = [
         instructions="Take with food",
     ),
     FixedMedication(
-        medication_id="2345678",
+        id="2345678",
         medication_name="Ibuprofen",
         dosage="200mg",
         frequency="Once a day",
@@ -20,7 +21,7 @@ MEDICATIONS_DB = [
         instructions="Take after meals",
     ),
     FixedMedication(
-        medication_id="3456789",
+        id="3456789",
         medication_name="Paracetamol",
         dosage="500mg",
         frequency="Every 6 hours as needed",
@@ -28,7 +29,7 @@ MEDICATIONS_DB = [
         instructions="Do not exceed 4g per day",
     ),
     FixedMedication(
-        medication_id="3893809",
+        id="3893809",
         medication_name="Paracetamol",
         dosage="500mg",
         frequency="Every 6 hours as needed",
@@ -36,7 +37,7 @@ MEDICATIONS_DB = [
         instructions="Do not exceed 4g per day",
     ),
     FixedMedication(
-        medication_id="5678901",
+        id="5678901",
         medication_name="Amoxicillin",
         dosage="500mg",
         frequency="Every 8 hours",
@@ -44,7 +45,7 @@ MEDICATIONS_DB = [
         instructions="Complete full course even if symptoms improve",
     ),
     FixedMedication(
-        medication_id="6789012",
+        id="6789012",
         medication_name="Atorvastatin",
         dosage="10mg",
         frequency="Once daily at bedtime",
@@ -52,7 +53,7 @@ MEDICATIONS_DB = [
         instructions="Avoid grapefruit juice while taking this medication",
     ),
     FixedMedication(
-        medication_id="7890123",
+        id="7890123",
         medication_name="Metformin",
         dosage="500mg",
         frequency="Twice daily with meals",
@@ -62,12 +63,19 @@ MEDICATIONS_DB = [
 ]
 
 
-def get_all_medications() -> List[FixedMedication]:
-    return MEDICATIONS_DB
+async def get_all_medications() -> List[FixedMedication]:
+    try:
+        return FIXED_MEDICATIONS_DATA
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while fetching all medications: {e}",
+        )
 
 
-def get_medication_by_id(medication_id: str) -> Optional[FixedMedication]:
-    for med in MEDICATIONS_DB:
-        if med.medication_id == medication_id:
+async def get_medication_by_id(id: str) -> Optional[FixedMedication]:
+
+    for med in FIXED_MEDICATIONS_DATA:
+        if med.id == id:
             return med
-    return None
+    raise HTTPException(status_code=404, detail=f"Medication with ID {id} not found")

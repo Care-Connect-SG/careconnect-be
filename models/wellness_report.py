@@ -17,4 +17,4 @@ class WellnessReportCreate(BaseModel):
 
 class WellnessReportResponse(WellnessReportCreate, ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    resident_id: str
+    resident_id: Optional[PyObjectId] = None
