@@ -2,11 +2,12 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
 from bson import ObjectId
 from fastapi import HTTPException, status
-from typing import List, Optional
+from typing import List
 from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
 from dateutil.relativedelta import relativedelta
+from db.connection import get_resident_db
 
 
 # Create Task
@@ -358,6 +359,7 @@ async def reopen_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
 
 # Enrich Task with Names
 async def enrich_task_with_names(db, task: dict) -> dict:
+
     if "assigned_to" in task:
         task["assigned_to_name"] = await get_assigned_to_name(
             db, str(task["assigned_to"])
@@ -366,7 +368,10 @@ async def enrich_task_with_names(db, task: dict) -> dict:
         task["assigned_to_name"] = "Unknown"
 
     if "resident" in task:
-        task["resident_name"] = await get_resident_full_name(db, str(task["resident"]))
+        resident_db = next(get_resident_db())
+        task["resident_name"] = await get_resident_full_name(
+            resident_db, str(task["resident"])
+        )
     else:
         task["resident_name"] = "Unknown"
 
@@ -390,7 +395,10 @@ async def enrich_task_with_names(db, task: dict) -> dict:
 # Enrich Task with Room
 async def enrich_task_with_room(db, task: dict) -> dict:
     if "resident" in task:
-        task["resident_room"] = await get_resident_room(db, str(task["resident"]))
+        resident_db = next(get_resident_db())
+        task["resident_room"] = await get_resident_room(
+            resident_db, str(task["resident"])
+        )
     else:
         task["resident_room"] = "Unknown"
     return task
