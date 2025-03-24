@@ -8,7 +8,7 @@ from services.careplan_service import (
     update_careplan,
     delete_careplan,
 )
-from db.connection import get_db
+from db.connection import get_resident_db
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents/{resident_id}/careplan", tags=["Careplan"])
@@ -17,14 +17,19 @@ router = APIRouter(prefix="/residents/{resident_id}/careplan", tags=["Careplan"]
 @router.post("/", response_model=CarePlanResponse, response_model_by_alias=False)
 @limiter.limit("10/minute")
 async def add_careplan(
-    request: Request, resident_id: str, careplan: CarePlanCreate, db=Depends(get_db)
+    request: Request,
+    resident_id: str,
+    careplan: CarePlanCreate,
+    db=Depends(get_resident_db),
 ):
     return await create_careplan(db, resident_id, careplan)
 
 
 @router.get("/", response_model=List[CarePlanResponse], response_model_by_alias=False)
 @limiter.limit("100/minute")
-async def list_careplans(request: Request, resident_id: str, db=Depends(get_db)):
+async def list_careplans(
+    request: Request, resident_id: str, db=Depends(get_resident_db)
+):
     return await get_careplans_by_resident(db, resident_id)
 
 
@@ -33,7 +38,7 @@ async def list_careplans(request: Request, resident_id: str, db=Depends(get_db))
 )
 @limiter.limit("100/minute")
 async def get_careplan(
-    request: Request, resident_id: str, careplan_id: str, db=Depends(get_db)
+    request: Request, resident_id: str, careplan_id: str, db=Depends(get_resident_db)
 ):
     return await get_careplan_by_id(db, resident_id, careplan_id)
 
@@ -47,7 +52,7 @@ async def update_careplan_record(
     resident_id: str,
     careplan_id: str,
     update_data: CarePlanCreate,
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
 ):
     return await update_careplan(db, resident_id, careplan_id, update_data)
 
@@ -55,6 +60,6 @@ async def update_careplan_record(
 @router.delete("/{careplan_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("10/minute")
 async def delete_careplan_record(
-    request: Request, resident_id: str, careplan_id: str, db=Depends(get_db)
+    request: Request, resident_id: str, careplan_id: str, db=Depends(get_resident_db)
 ):
     return await delete_careplan(db, resident_id, careplan_id)

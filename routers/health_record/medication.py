@@ -8,7 +8,7 @@ from services.medication_service import (
     update_medication,
     delete_medication,
 )
-from db.connection import get_db
+from db.connection import get_resident_db
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents/{resident_id}/medications", tags=["Medications"])
@@ -17,14 +17,19 @@ router = APIRouter(prefix="/residents/{resident_id}/medications", tags=["Medicat
 @router.post("/", response_model=MedicationResponse, response_model_by_alias=False)
 @limiter.limit("10/minute")
 async def add_medication(
-    request: Request, resident_id: str, medication: MedicationCreate, db=Depends(get_db)
+    request: Request,
+    resident_id: str,
+    medication: MedicationCreate,
+    db=Depends(get_resident_db),
 ):
     return await create_medication(db, resident_id, medication)
 
 
 @router.get("/", response_model=List[MedicationResponse], response_model_by_alias=False)
 @limiter.limit("100/minute")
-async def list_medications(request: Request, resident_id: str, db=Depends(get_db)):
+async def list_medications(
+    request: Request, resident_id: str, db=Depends(get_resident_db)
+):
     return await get_medications_by_resident(db, resident_id)
 
 
@@ -33,7 +38,7 @@ async def list_medications(request: Request, resident_id: str, db=Depends(get_db
 )
 @limiter.limit("100/minute")
 async def get_medication(
-    request: Request, resident_id: str, medication_id: str, db=Depends(get_db)
+    request: Request, resident_id: str, medication_id: str, db=Depends(get_resident_db)
 ):
     return await get_medication_by_id(db, resident_id, medication_id)
 
@@ -47,7 +52,7 @@ async def update_medication_record(
     resident_id: str,
     medication_id: str,
     update_data: MedicationCreate,
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
 ):
     return await update_medication(db, resident_id, medication_id, update_data)
 
@@ -55,6 +60,6 @@ async def update_medication_record(
 @router.delete("/{medication_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("10/minute")
 async def delete_medication_record(
-    request: Request, resident_id: str, medication_id: str, db=Depends(get_db)
+    request: Request, resident_id: str, medication_id: str, db=Depends(get_resident_db)
 ):
     return await delete_medication(db, resident_id, medication_id)
