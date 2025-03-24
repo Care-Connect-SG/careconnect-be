@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Query
 from models.resident import RegistrationCreate, RegistrationResponse
-from typing import List, Optional
+from typing import List, Optional, Dict
 from services.resident_service import (
     create_residentInfo,
     get_all_residents,
@@ -10,6 +10,7 @@ from services.resident_service import (
     delete_resident,
     get_all_residents_by_nurse,
 )
+from services.user_service import require_roles
 from db.connection import get_db
 from utils.limiter import limiter
 
@@ -97,7 +98,9 @@ async def update_resident_record(
     resident_id: str,
     update_data: RegistrationCreate,
     db=Depends(get_db),
+    current_user: Dict = Depends(require_roles(["Admin"])),
 ):
+
     return await update_resident(db, resident_id, update_data)
 
 

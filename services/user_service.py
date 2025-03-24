@@ -40,7 +40,7 @@ def require_roles(required_roles: List[str]):
 
 
 def get_user_role(token: str = Depends(oauth2_scheme)):
-    """Extracts the user’s role from the JWT token."""
+    """Extracts the user's role from the JWT token."""
     user_data = verify_token(
         token,
         credentials_exception=HTTPException(
@@ -229,9 +229,8 @@ async def get_caregiver_tags(search_key: str, limit: int, db) -> List[UserTagRes
 
     caregivers = []
     async for record in cursor:
-        record["id"] = str(record["_id"])
-        del record["_id"]
-        caregivers.append(record)
+        caregivers.append(UserTagResponse(**record))
+
     return caregivers
 
 

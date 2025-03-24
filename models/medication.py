@@ -1,6 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional
+from models.base import ModelConfig, PyObjectId
 
 
 class MedicationCreate(BaseModel):
@@ -12,9 +13,9 @@ class MedicationCreate(BaseModel):
     instructions: Optional[str] = None
 
 
-class MedicationResponse(BaseModel):
-    id: str
-    resident_id: str
+class MedicationResponse(ModelConfig):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    resident_id: Optional[PyObjectId] = None
     medication_name: str
     dosage: str
     frequency: str

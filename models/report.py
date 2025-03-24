@@ -18,7 +18,7 @@ class ReportSectionContent(BaseModel):
 
 
 class ReportCreate(BaseModel):
-    form_id: str
+    form_id: Optional[PyObjectId] = None
     form_name: str
     reporter: UserTagResponse
     primary_resident: Optional[ResidentTagResponse] = None
@@ -26,6 +26,7 @@ class ReportCreate(BaseModel):
     involved_caregivers: List[UserTagResponse] = Field(default_factory=list)
     report_content: List[ReportSectionContent]
     status: ReportStatus
+    reference_report_id: Optional[PyObjectId] = None
 
 
 class ReportResponse(ReportCreate, ModelConfig):

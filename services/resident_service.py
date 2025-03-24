@@ -136,10 +136,9 @@ async def get_resident_tags(search_key: str, limit, db) -> List[ResidentTagRespo
 
     residents = []
     async for record in cursor:
-        record["id"] = str(record["_id"])
-        del record["_id"]
-        record["name"] = record["full_name"]
-        residents.append(record)
+        resident_data = {"id": record["_id"], "name": record["full_name"]}
+        residents.append(ResidentTagResponse(**resident_data))
+
     return residents
 
 

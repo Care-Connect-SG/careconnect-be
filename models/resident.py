@@ -5,6 +5,7 @@ from models.base import PyObjectId, ModelConfig
 
 
 class RegistrationCreate(BaseModel):
+    photograph: Optional[str] = None
     full_name: str
     gender: str
     date_of_birth: date
@@ -20,6 +21,7 @@ class RegistrationCreate(BaseModel):
 
 class RegistrationResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    photograph: Optional[str] = None
     full_name: str
     gender: str
     date_of_birth: date
@@ -35,5 +37,5 @@ class RegistrationResponse(ModelConfig):
 
 
 class ResidentTagResponse(ModelConfig):
-    id: Optional[PyObjectId] = Field(alias="_id")
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str
