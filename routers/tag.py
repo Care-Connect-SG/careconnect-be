@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Request
 
-from db.connection import get_db
+from db.connection import get_resident_db, get_db
 from models.resident import ResidentTagResponse
 from models.user import UserTagResponse
 from services.resident_service import get_resident_tags
@@ -22,7 +22,7 @@ async def search_resident_tags(
     request: Request,
     search_key: Optional[str] = None,
     limit: int = 10,
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
 ):
     return await get_resident_tags(search_key, limit, db)
 
