@@ -5,7 +5,9 @@ from models.medication import MedicationCreate, MedicationResponse
 
 
 async def create_medication(db, resident_id: str, medication_data: MedicationCreate):
-    if not ObjectId.is_valid(resident_id):
+    try:
+        resident_oid = ObjectId(resident_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
     medication_dict = {
@@ -21,6 +23,7 @@ async def create_medication(db, resident_id: str, medication_data: MedicationCre
         medication_dict["start_date"] = datetime.datetime.combine(
             medication_dict["start_date"], datetime.time.min
         )
+
     if "end_date" in medication_dict and isinstance(
         medication_dict["end_date"], datetime.date
     ):
@@ -45,7 +48,9 @@ async def get_all_medications(db):
 
 
 async def get_medications_by_resident(db, resident_id: str):
-    if not ObjectId.is_valid(resident_id):
+    try:
+        resident_oid = ObjectId(resident_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
     resident_obj_id = ObjectId(resident_id)
@@ -60,7 +65,9 @@ async def get_medications_by_resident(db, resident_id: str):
 
 
 async def get_medication_by_id(db, resident_id: str, medication_id: str):
-    if not ObjectId.is_valid(medication_id):
+    try:
+        medication_oid = ObjectId(medication_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid medication ID")
 
     record = await db["medications"].find_one({"_id": ObjectId(medication_id)})
@@ -73,7 +80,9 @@ async def get_medication_by_id(db, resident_id: str, medication_id: str):
 async def update_medication(
     db, resident_id: str, medication_id: str, update_data: MedicationCreate
 ):
-    if not ObjectId.is_valid(medication_id):
+    try:
+        medication_oid = ObjectId(medication_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid medication ID")
 
     update_dict = {
@@ -95,7 +104,7 @@ async def update_medication(
                 )
 
     result = await db["medications"].update_one(
-        {"_id": ObjectId(medication_id)}, {"$set": update_dict}
+        {"_id": medication_oid}, {"$set": update_dict}
     )
 
     if result.modified_count == 0 and result.matched_count == 0:
@@ -109,7 +118,9 @@ async def update_medication(
 
 
 async def delete_medication(db, resident_id: str, medication_id: str):
-    if not ObjectId.is_valid(medication_id):
+    try:
+        medication_oid = ObjectId(medication_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid medication ID")
 
     result = await db["medications"].delete_one({"_id": ObjectId(medication_id)})

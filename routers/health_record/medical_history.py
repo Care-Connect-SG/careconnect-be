@@ -72,7 +72,9 @@ async def update_medical_record(
 @router.delete("/{record_id}")
 @limiter.limit("10/second")
 async def delete_medical_record(
-    request: Request, record_id: str, db: AsyncIOMotorDatabase = Depends(get_resident_db)
+    request: Request,
+    record_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
 ):
     return await delete_medical_record_by_id(db, record_id)
 
@@ -92,6 +94,8 @@ async def delete_medical_record(
 )
 @limiter.limit("10/second")
 async def get_medical_records_by_resident_endpoint(
-    request: Request, resident_id: str, db: AsyncIOMotorDatabase = Depends(get_resident_db)
+    request: Request,
+    resident_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
 ):
     return await get_medical_records_by_resident(db, resident_id)

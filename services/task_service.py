@@ -368,7 +368,7 @@ async def enrich_task_with_names(db, task: dict) -> dict:
         task["assigned_to_name"] = "Unknown"
 
     if "resident" in task:
-        resident_db = next(get_resident_db())
+        resident_db = db.client.get_database("resident")
         task["resident_name"] = await get_resident_full_name(
             resident_db, str(task["resident"])
         )
@@ -395,7 +395,7 @@ async def enrich_task_with_names(db, task: dict) -> dict:
 # Enrich Task with Room
 async def enrich_task_with_room(db, task: dict) -> dict:
     if "resident" in task:
-        resident_db = next(get_resident_db())
+        resident_db = db.client.get_database("resident")
         task["resident_room"] = await get_resident_room(
             resident_db, str(task["resident"])
         )

@@ -27,7 +27,9 @@ async def search_resident_tags(
     return await get_resident_tags(search_key, limit, db)
 
 
-@router.get("/caregivers", response_model=List[UserTagResponse])
+@router.get(
+    "/caregivers", response_model=List[UserTagResponse], response_model_by_alias=False
+)
 @limiter.limit("100/minute")
 async def search_users_by_name(
     request: Request,
