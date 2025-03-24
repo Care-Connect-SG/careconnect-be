@@ -40,7 +40,7 @@ async def create_medical_record(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     return await create_medical_history_by_template(
-        db, template_type, record, resident_id
+        db, template_type, resident_id, record
     )
 
 

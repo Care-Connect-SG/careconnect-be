@@ -21,10 +21,7 @@ async def create_medical_history_by_template(
     if not record:
         raise HTTPException(status_code=400, detail="Record data is required")
 
-    if ObjectId.is_valid(resident_id):
-        record["resident_id"] = ObjectId(resident_id)
-    else:
-        record["resident_id"] = resident_id
+    record["resident_id"] = ObjectId(resident_id)
 
     if template_type == "condition":
         return await create_condition_record(db, record)
@@ -530,24 +527,38 @@ async def get_medical_records_by_resident(
     ]
 ]:
     try:
+
+        query = {
+            "$or": [
+                {"resident_id": resident_id},
+                {
+                    "resident_id": (
+                        ObjectId(resident_id)
+                        if ObjectId.is_valid(resident_id)
+                        else None
+                    )
+                },
+            ]
+        }
+
         conditions = []
-        async for record in db["conditions"].find({"resident_id": resident_id}):
+        async for record in db["conditions"].find(query):
             conditions.append(ConditionRecord.parse_obj(record))
 
         allergies = []
-        async for record in db["allergies"].find({"resident_id": resident_id}):
+        async for record in db["allergies"].find(query):
             allergies.append(AllergyRecord.parse_obj(record))
 
         chronic = []
-        async for record in db["chronic_illnesses"].find({"resident_id": resident_id}):
+        async for record in db["chronic_illnesses"].find(query):
             chronic.append(ChronicIllnessRecord.parse_obj(record))
 
         surgical = []
-        async for record in db["surgical_history"].find({"resident_id": resident_id}):
+        async for record in db["surgical_history"].find(query):
             surgical.append(SurgicalHistoryRecord.parse_obj(record))
 
         immunizations = []
-        async for record in db["immunizations"].find({"resident_id": resident_id}):
+        async for record in db["immunizations"].find(query):
             immunizations.append(ImmunizationRecord.parse_obj(record))
 
         return conditions + allergies + chronic + surgical + immunizations
