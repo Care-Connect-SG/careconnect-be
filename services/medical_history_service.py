@@ -530,32 +530,24 @@ async def get_medical_records_by_resident(
     ]
 ]:
     try:
-        resident_obj_id = (
-            ObjectId(resident_id) if ObjectId.is_valid(resident_id) else resident_id
-        )
-
         conditions = []
-        async for record in db["conditions"].find({"resident_id": resident_obj_id}):
+        async for record in db["conditions"].find({"resident_id": resident_id}):
             conditions.append(ConditionRecord.parse_obj(record))
 
         allergies = []
-        async for record in db["allergies"].find({"resident_id": resident_obj_id}):
+        async for record in db["allergies"].find({"resident_id": resident_id}):
             allergies.append(AllergyRecord.parse_obj(record))
 
         chronic = []
-        async for record in db["chronic_illnesses"].find(
-            {"resident_id": resident_obj_id}
-        ):
+        async for record in db["chronic_illnesses"].find({"resident_id": resident_id}):
             chronic.append(ChronicIllnessRecord.parse_obj(record))
 
         surgical = []
-        async for record in db["surgical_history"].find(
-            {"resident_id": resident_obj_id}
-        ):
+        async for record in db["surgical_history"].find({"resident_id": resident_id}):
             surgical.append(SurgicalHistoryRecord.parse_obj(record))
 
         immunizations = []
-        async for record in db["immunizations"].find({"resident_id": resident_obj_id}):
+        async for record in db["immunizations"].find({"resident_id": resident_id}):
             immunizations.append(ImmunizationRecord.parse_obj(record))
 
         return conditions + allergies + chronic + surgical + immunizations
