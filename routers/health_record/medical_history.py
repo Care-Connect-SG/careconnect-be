@@ -1,8 +1,8 @@
 from typing import List, Union
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
-from db.connection import get_db
+from db.connection import get_resident_db
 from models.medical_history import (
     MedicalRecordType,
     BaseMedicalRecord,
@@ -18,6 +18,9 @@ from services.medical_history_service import (
     update_medical_record,
     delete_medical_record,
     get_medical_records_by_resident,
+    create_medical_history_by_template,
+    update_medical_record_by_type,
+    delete_medical_record_by_id,
 )
 from utils.limiter import limiter
 
@@ -43,21 +46,16 @@ MedicalRecordUnion = Union[
     summary="Create a new medical record",
     description="Create a new medical record of the specified type for a resident",
 )
-async def create_record(
-    request: CreateMedicalRecordRequest,
-    db: AsyncIOMotorDatabase = Depends(get_db),
-) -> BaseMedicalRecord:
-    """
-    Create a new medical record with the following data:
-    - **record_type**: Type of medical record (condition, allergy, chronic, surgical, immunization)
-    - **resident_id**: ID of the resident this record belongs to
-    - **record_data**: Data specific to the record type
-    """
-    return await create_medical_record(
-        db=db,
-        record_type=request.record_type,
-        resident_id=request.resident_id,
-        record_data=request.record_data,
+@limiter.limit("10/second")
+async def create_medical_record(
+    request: Request,
+    template_type: str,
+    record: dict,
+    resident_id: str = Query(..., description="Resident ID linked to the record"),
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
+):
+    return await create_medical_history_by_template(
+        db, template_type, resident_id, record
     )
 
 @router.put(
@@ -68,28 +66,22 @@ async def create_record(
 )
 async def update_record(
     record_id: str,
-    record_type: MedicalRecordType,
-    resident_id: str = Query(..., description="ID of the resident"),
-    update_data: dict = None,
-    db: AsyncIOMotorDatabase = Depends(get_db),
-) -> BaseMedicalRecord:
-    """
-    Update a medical record with the following parameters:
-    - **record_id**: ID of the record to update
-    - **record_type**: Type of medical record
-    - **resident_id**: ID of the resident this record belongs to
-    - **update_data**: New data for the record
-    """
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No update data provided")
-
-    return await update_medical_record(
-        db=db,
-        record_id=record_id,
-        record_type=record_type,
-        resident_id=resident_id,
-        update_data=update_data,
+    record: dict,
+    resident_id: str = Query(..., description="Resident ID linked to the record"),
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
+):
+    return await update_medical_record_by_type(
+        db, template_type, resident_id, record_id, record
     )
+
+@router.delete("/{record_id}")
+@limiter.limit("10/second")
+async def delete_medical_record(
+    request: Request,
+    record_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
+):
+    return await delete_medical_record_by_id(db, record_id)
 
 @router.get(
     "/resident/{resident_id}",
@@ -97,15 +89,12 @@ async def update_record(
     summary="Get resident's medical records",
     description="Retrieve all medical records for a specific resident",
 )
-async def get_resident_records(
+@limiter.limit("10/second")
+async def get_medical_records_by_resident_endpoint(
+    request: Request,
     resident_id: str,
-    db: AsyncIOMotorDatabase = Depends(get_db),
-) -> List[BaseMedicalRecord]:
-    """
-    Get all medical records for a resident:
-    - **resident_id**: ID of the resident
-    Returns a list of medical records with full details for each record type
-    """
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
+):
     return await get_medical_records_by_resident(db, resident_id)
 
 @router.delete(
@@ -117,7 +106,7 @@ async def delete_record(
     record_id: str,
     record_type: MedicalRecordType,
     resident_id: str = Query(..., description="ID of the resident"),
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_resident_db),
 ) -> dict:
     """
     Delete a medical record with the following parameters:

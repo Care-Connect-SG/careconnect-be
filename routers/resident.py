@@ -11,7 +11,7 @@ from services.resident_service import (
     get_all_residents_by_nurse,
 )
 from services.user_service import require_roles
-from db.connection import get_db
+from db.connection import get_resident_db
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents", tags=["Resident Records"])
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/residents", tags=["Resident Records"])
 @router.post("/createNewRecord")
 @limiter.limit("10/minute")
 async def create_resident_record(
-    request: Request, registration: RegistrationCreate, db=Depends(get_db)
+    request: Request, registration: RegistrationCreate, db=Depends(get_resident_db)
 ):
     return await create_residentInfo(db, registration)
 
@@ -33,7 +33,7 @@ async def create_resident_record(
 @limiter.limit("100/minute")
 async def list_residents(
     request: Request,
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
     nurse: Optional[str] = None,  # e.g. /residents?nurse=Alice
 ):
     if nurse:
@@ -48,7 +48,7 @@ async def list_residents(
 @limiter.limit("100/minute")
 async def list_residents(
     request: Request,
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
     nurse: Optional[str] = None,
     page: Optional[int] = 1,  # default to page 1 if not provided
 ):
@@ -76,7 +76,7 @@ async def list_residents(
 async def search_residents(
     request: Request,
     name: str = Query(..., description="Substring to search in resident names"),
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
 ):
     return await get_residents_by_name(db, name)
 
@@ -85,7 +85,9 @@ async def search_residents(
     "/{resident_id}", response_model=RegistrationResponse, response_model_by_alias=False
 )
 @limiter.limit("100/minute")
-async def view_resident_by_id(request: Request, resident_id: str, db=Depends(get_db)):
+async def view_resident_by_id(
+    request: Request, resident_id: str, db=Depends(get_resident_db)
+):
     return await get_resident_by_id(db, resident_id)
 
 
@@ -97,7 +99,7 @@ async def update_resident_record(
     request: Request,
     resident_id: str,
     update_data: RegistrationCreate,
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
     current_user: Dict = Depends(require_roles(["Admin"])),
 ):
 
@@ -107,6 +109,6 @@ async def update_resident_record(
 @router.delete("/{resident_id}")
 @limiter.limit("10/minute")
 async def delete_resident_record(
-    request: Request, resident_id: str, db=Depends(get_db)
+    request: Request, resident_id: str, db=Depends(get_resident_db)
 ):
     return await delete_resident(db, resident_id)

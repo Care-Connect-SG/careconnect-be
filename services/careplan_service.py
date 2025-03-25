@@ -5,7 +5,9 @@ from models.careplan import CarePlanCreate, CarePlanResponse
 
 
 async def create_careplan(db, resident_id: str, careplan_data: CarePlanCreate):
-    if not ObjectId.is_valid(resident_id):
+    try:
+        resident_oid = ObjectId(resident_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
     careplan_dict = {
@@ -28,7 +30,9 @@ async def create_careplan(db, resident_id: str, careplan_data: CarePlanCreate):
 
 
 async def get_careplans_by_resident(db, resident_id: str):
-    if not ObjectId.is_valid(resident_id):
+    try:
+        resident_oid = ObjectId(resident_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
     resident_obj_id = ObjectId(resident_id)
@@ -42,10 +46,12 @@ async def get_careplans_by_resident(db, resident_id: str):
 
 
 async def get_careplan_by_id(db, resident_id: str, careplan_id: str):
-    if not ObjectId.is_valid(careplan_id):
+    try:
+        careplan_oid = ObjectId(careplan_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid careplan ID")
 
-    record = await db["careplans"].find_one({"_id": ObjectId(careplan_id)})
+    record = await db["careplans"].find_one({"_id": careplan_oid})
     if not record:
         raise HTTPException(status_code=404, detail="Care plan not found")
 
@@ -55,7 +61,9 @@ async def get_careplan_by_id(db, resident_id: str, careplan_id: str):
 async def update_careplan(
     db, resident_id: str, careplan_id: str, update_data: CarePlanCreate
 ):
-    if not ObjectId.is_valid(careplan_id):
+    try:
+        careplan_oid = ObjectId(careplan_id)
+    except:
         raise HTTPException(status_code=400, detail="Invalid careplan ID")
 
     update_dict = {
@@ -72,14 +80,27 @@ async def update_careplan(
         )
 
     result = await db["careplans"].update_one(
-        {"_id": ObjectId(careplan_id)}, {"$set": update_dict}
+        {"_id": careplan_oid}, {"$set": update_dict}
     )
 
-    if result.modified_count == 0 and result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Care plan not found")
+    if result.modified_count == 0:
+        record = await db["careplans"].find_one({"_id": careplan_oid})
+        if not record:
+            raise HTTPException(status_code=404, detail="Care plan not found")
 
-    updated_record = await db["careplans"].find_one({"_id": ObjectId(careplan_id)})
-    if not updated_record:
-        raise HTTPException(status_code=404, detail="Care plan not found")
-
+    updated_record = await db["careplans"].find_one({"_id": careplan_oid})
     return CarePlanResponse(**updated_record)
+
+
+async def delete_careplan(db, resident_id: str, careplan_id: str):
+    try:
+        careplan_oid = ObjectId(careplan_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid careplan ID")
+
+    result = await db["careplans"].delete_one({"_id": careplan_oid})
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Care plan not found")
+
+    return {"message": "Care plan deleted successfully"}

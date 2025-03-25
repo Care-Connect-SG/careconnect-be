@@ -5,7 +5,11 @@ from utils.config import MONGO_URI
 
 
 async def get_db(request: Request):
-    return request.app.mongodb
+    return request.app.primary_db
+
+
+async def get_resident_db(request: Request):
+    return request.app.secondary_db
 
 
 @asynccontextmanager
@@ -14,9 +18,14 @@ async def lifespan(app: FastAPI):
         app.mongodb_client = AsyncIOMotorClient(
             MONGO_URI, serverSelectionTimeoutMS=5000
         )
-        app.mongodb = app.mongodb_client.get_database("caregiver")
-        await app.mongodb.command("ping")
-        print("✅ Connected to MongoDB Atlas")
+        app.primary_db = app.mongodb_client.get_database("caregiver")
+        await app.primary_db.command("ping")
+        print("✅ Connected to Caregiver MongoDB Atlas")
+
+        app.secondary_db = app.mongodb_client.get_database("resident")
+        await app.secondary_db.command("ping")
+        print("✅ Connected to Resident MongoDB Atlas")
+
         yield
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
@@ -24,4 +33,7 @@ async def lifespan(app: FastAPI):
     finally:
         if hasattr(app, "mongodb_client"):
             app.mongodb_client.close()
-            print("🛑 Database disconnected.")
+            print("🛑 Primary Database disconnected.")
+        if hasattr(app, "second_client"):
+            app.second_client.close()
+            print("🛑 Secondary Database disconnected.")
