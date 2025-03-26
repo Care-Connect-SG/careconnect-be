@@ -22,15 +22,7 @@ MEDICATIONS_DB = [
     ),
     FixedMedication(
         medication_id="3456789",
-        medication_name="Paracetamol",
-        dosage="500mg",
-        frequency="Every 6 hours as needed",
-        expiry_date=datetime.date(2026, 1, 20),
-        instructions="Do not exceed 4g per day",
-    ),
-    FixedMedication(
-        medication_id="3893809",
-        medication_name="Paracetamol",
+        medication_name="Paracetamol Strong",
         dosage="500mg",
         frequency="Every 6 hours as needed",
         expiry_date=datetime.date(2026, 1, 20),

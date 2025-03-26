@@ -15,5 +15,5 @@ async def get_medication(medication_id: str):
     """Retrieve medication details by scanning the barcode"""
     medication = get_medication_by_id(medication_id)
     if medication:
-        return medication
+        return medication.dict()
     raise HTTPException(status_code=404, detail="Medication not found")
