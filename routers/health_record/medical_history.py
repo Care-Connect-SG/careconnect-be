@@ -16,9 +16,8 @@ from services.medical_history_service import (
 from utils.limiter import limiter
 
 router = APIRouter(
-    prefix="/medical-records",
-    tags=["Medical Records"],
-    responses={404: {"description": "Record not found"}},
+    prefix="/medical-history",
+    tags=["Medical History"],
 )
 
 
