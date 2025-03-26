@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import HTTPException, Request
 from bson import ObjectId
@@ -15,8 +15,8 @@ async def create_activity(
         db = await get_db(request)
         activity_dict = activity.model_dump()
         activity_dict["created_by"] = ObjectId(user_id)
-        activity_dict["created_at"] = datetime.utcnow()
-        activity_dict["updated_at"] = datetime.utcnow()
+        activity_dict["created_at"] = datetime.now(timezone.utc)
+        activity_dict["updated_at"] = datetime.now(timezone.utc)
 
         result = await db[collection_name].insert_one(activity_dict)
         created_activity = await db[collection_name].find_one(
@@ -107,8 +107,8 @@ async def update_activity(
                 status_code=403, detail="Not authorized to update this activity"
             )
 
-        update_data = activity_update.dict(exclude_unset=True)
-        update_data["updated_at"] = datetime.utcnow()
+        update_data = activity_update.model_dump(exclude_unset=True)
+        update_data["updated_at"] = datetime.now(timezone.utc)
 
         result = await db[collection_name].update_one(
             {"_id": ObjectId(activity_id)}, {"$set": update_data}

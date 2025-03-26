@@ -2,568 +2,205 @@ import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi import HTTPException
 from bson import ObjectId
-from typing import List, Union
+from typing import List, Union, Dict, Type
 from models.medical_history import (
+    MedicalRecordType,
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
     SurgicalHistoryRecord,
     ImmunizationRecord,
+    BaseMedicalRecord,
+    MedicalRecordUnion,
 )
 
 
-async def create_medical_history_by_template(
-    db: AsyncIOMotorDatabase, template_type: str, resident_id: str, record: dict
-):
-    if not template_type:
-        raise HTTPException(status_code=400, detail="Template type is required")
-
-    if not record:
-        raise HTTPException(status_code=400, detail="Record data is required")
-
-    record["resident_id"] = ObjectId(resident_id)
-
-    if template_type == "condition":
-        return await create_condition_record(db, record)
-    elif template_type == "allergy":
-        return await create_allergy_record(db, record)
-    elif template_type == "chronic":
-        return await create_chronic_illness_record(db, record)
-    elif template_type == "surgical":
-        return await create_surgical_history_record(db, record)
-    elif template_type == "immunization":
-        return await create_immunization_record(db, record)
-    else:
-        raise HTTPException(status_code=400, detail="Invalid template type")
+RECORD_TYPE_MAP: Dict[
+    MedicalRecordType, Dict[str, Union[str, Type[BaseMedicalRecord]]]
+] = {
+    MedicalRecordType.CONDITION: {"collection": "conditions", "model": ConditionRecord},
+    MedicalRecordType.ALLERGY: {"collection": "allergies", "model": AllergyRecord},
+    MedicalRecordType.CHRONIC_ILLNESS: {
+        "collection": "chronic_illnesses",
+        "model": ChronicIllnessRecord,
+    },
+    MedicalRecordType.SURGICAL: {
+        "collection": "surgical_history",
+        "model": SurgicalHistoryRecord,
+    },
+    MedicalRecordType.IMMUNIZATION: {
+        "collection": "immunizations",
+        "model": ImmunizationRecord,
+    },
+}
 
 
-async def create_condition_record(
-    db: AsyncIOMotorDatabase, data: dict
-) -> ConditionRecord:
-    try:
-        record = ConditionRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing condition record: {e}"
-        )
-
-    insert_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if not insert_data.get("resident_id"):
-        raise HTTPException(status_code=400, detail="Resident ID is required")
-
-    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
-        insert_data["resident_id"]
-    ):
-        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
-
-    for field, value in insert_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            insert_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["conditions"].insert_one(insert_data)
-    new_record = await db["conditions"].find_one({"_id": result.inserted_id})
-    if not new_record:
-        raise HTTPException(status_code=500, detail="Failed to create condition record")
-
-    return ConditionRecord.parse_obj(new_record)
-
-
-async def create_allergy_record(db: AsyncIOMotorDatabase, data: dict) -> AllergyRecord:
-    try:
-        record = AllergyRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing allergy record: {e}"
-        )
-
-    insert_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if not insert_data.get("resident_id"):
-        raise HTTPException(status_code=400, detail="Resident ID is required")
-
-    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
-        insert_data["resident_id"]
-    ):
-        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
-
-    for field, value in insert_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            insert_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["allergies"].insert_one(insert_data)
-    new_record = await db["allergies"].find_one({"_id": result.inserted_id})
-    if not new_record:
-        raise HTTPException(status_code=500, detail="Failed to create allergy record")
-
-    return AllergyRecord.parse_obj(new_record)
-
-
-async def create_chronic_illness_record(
-    db: AsyncIOMotorDatabase, data: dict
-) -> ChronicIllnessRecord:
-    try:
-        record = ChronicIllnessRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing chronic illness record: {e}"
-        )
-
-    insert_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if not insert_data.get("resident_id"):
-        raise HTTPException(status_code=400, detail="Resident ID is required")
-
-    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
-        insert_data["resident_id"]
-    ):
-        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
-
-    for field, value in insert_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            insert_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["chronic_illnesses"].insert_one(insert_data)
-    new_record = await db["chronic_illnesses"].find_one({"_id": result.inserted_id})
-    if not new_record:
-        raise HTTPException(
-            status_code=500, detail="Failed to create chronic illness record"
-        )
-
-    return ChronicIllnessRecord.parse_obj(new_record)
-
-
-async def create_surgical_history_record(
-    db: AsyncIOMotorDatabase, data: dict
-) -> SurgicalHistoryRecord:
-    try:
-        record = SurgicalHistoryRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing surgical history record: {e}"
-        )
-
-    insert_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if not insert_data.get("resident_id"):
-        raise HTTPException(status_code=400, detail="Resident ID is required")
-
-    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
-        insert_data["resident_id"]
-    ):
-        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
-
-    for field, value in insert_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            insert_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["surgical_history"].insert_one(insert_data)
-    new_record = await db["surgical_history"].find_one({"_id": result.inserted_id})
-    if not new_record:
-        raise HTTPException(
-            status_code=500, detail="Failed to create surgical history record"
-        )
-
-    return SurgicalHistoryRecord.parse_obj(new_record)
-
-
-async def create_immunization_record(
-    db: AsyncIOMotorDatabase, data: dict
-) -> ImmunizationRecord:
-    try:
-        record = ImmunizationRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing immunization record: {e}"
-        )
-
-    insert_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if not insert_data.get("resident_id"):
-        raise HTTPException(status_code=400, detail="Resident ID is required")
-
-    if isinstance(insert_data["resident_id"], str) and ObjectId.is_valid(
-        insert_data["resident_id"]
-    ):
-        insert_data["resident_id"] = ObjectId(insert_data["resident_id"])
-
-    for field, value in insert_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            insert_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["immunizations"].insert_one(insert_data)
-    new_record = await db["immunizations"].find_one({"_id": result.inserted_id})
-    if not new_record:
-        raise HTTPException(
-            status_code=500, detail="Failed to create immunization record"
-        )
-
-    return ImmunizationRecord.parse_obj(new_record)
-
-
-async def get_all_medical_records(db: AsyncIOMotorDatabase) -> List[
-    Union[
-        ConditionRecord,
-        AllergyRecord,
-        ChronicIllnessRecord,
-        SurgicalHistoryRecord,
-        ImmunizationRecord,
-    ]
-]:
-    try:
-        conditions = []
-        async for record in db["conditions"].find():
-            conditions.append(ConditionRecord.parse_obj(record))
-
-        allergies = []
-        async for record in db["allergies"].find():
-            allergies.append(AllergyRecord.parse_obj(record))
-
-        chronic = []
-        async for record in db["chronic_illnesses"].find():
-            chronic.append(ChronicIllnessRecord.parse_obj(record))
-
-        surgical = []
-        async for record in db["surgical_history"].find():
-            surgical.append(SurgicalHistoryRecord.parse_obj(record))
-
-        immunizations = []
-        async for record in db["immunizations"].find():
-            immunizations.append(ImmunizationRecord.parse_obj(record))
-
-        return conditions + allergies + chronic + surgical + immunizations
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error fetching medical records: {e}"
-        )
-
-
-async def update_medical_record_by_type(
+async def create_medical_record(
     db: AsyncIOMotorDatabase,
-    template_type: str,
+    record_type: MedicalRecordType,
     resident_id: str,
+    record_data: dict,
+) -> MedicalRecordUnion:
+    try:
+        record_info = RECORD_TYPE_MAP[record_type]
+        model_class = record_info["model"]
+        collection_name = record_info["collection"]
+
+        record_data["resident_id"] = ObjectId(resident_id)
+        record_data["created_at"] = datetime.date.today()
+        record_data["updated_at"] = datetime.date.today()
+
+        try:
+            record = model_class.model_validate(record_data)
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid data for {record_type} record: {str(e)}",
+            )
+
+        insert_data = record.model_dump()
+
+        for field, value in insert_data.items():
+            if isinstance(value, datetime.date) and not isinstance(
+                value, datetime.datetime
+            ):
+                insert_data[field] = datetime.datetime.combine(value, datetime.time.min)
+
+        result = await db[collection_name].insert_one(insert_data)
+
+        new_record = await db[collection_name].find_one({"_id": result.inserted_id})
+        if not new_record:
+            raise HTTPException(
+                status_code=500, detail="Failed to create medical record"
+            )
+
+        return model_class.model_validate(new_record)
+
+    except KeyError:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid record type: {record_type}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error creating medical record: {str(e)}"
+        )
+
+
+async def update_medical_record(
+    db: AsyncIOMotorDatabase,
     record_id: str,
-    record: dict,
-):
-    if not template_type:
-        raise HTTPException(status_code=400, detail="Template type is required")
-
-    if not record:
-        raise HTTPException(status_code=400, detail="No update data provided")
-
-    if ObjectId.is_valid(resident_id):
-        record["resident_id"] = ObjectId(resident_id)
-    else:
-        record["resident_id"] = resident_id
-
-    if template_type == "condition":
-        return await update_condition_record(db, record_id, record)
-    elif template_type == "allergy":
-        return await update_allergy_record(db, record_id, record)
-    elif template_type == "chronic":
-        return await update_chronic_illness_record(db, record_id, record)
-    elif template_type == "surgical":
-        return await update_surgical_history_record(db, record_id, record)
-    elif template_type == "immunization":
-        return await update_immunization_record(db, record_id, record)
-    else:
-        raise HTTPException(status_code=400, detail="Invalid template type")
-
-
-async def update_condition_record(
-    db: AsyncIOMotorDatabase, record_id: str, data: dict
-) -> ConditionRecord:
+    record_type: MedicalRecordType,
+    resident_id: str,
+    update_data: dict,
+) -> MedicalRecordUnion:
     try:
-        record = ConditionRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing condition record: {e}"
-        )
+        if not ObjectId.is_valid(record_id):
+            raise HTTPException(status_code=400, detail="Invalid record ID format")
 
-    update_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
+        record_info = RECORD_TYPE_MAP[record_type]
+        model_class = record_info["model"]
+        collection_name = record_info["collection"]
 
-    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
-        update_data["resident_id"]
-    ):
-        update_data["resident_id"] = ObjectId(update_data["resident_id"])
+        update_data["resident_id"] = ObjectId(resident_id)
+        update_data["updated_at"] = datetime.date.today()
 
-    for field, value in update_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            update_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["conditions"].update_one(
-        {"_id": ObjectId(record_id)}, {"$set": update_data}
-    )
-    if result.modified_count == 0:
-        existing = await db["conditions"].find_one({"_id": ObjectId(record_id)})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Condition record not found")
-
-    new_record = await db["conditions"].find_one({"_id": ObjectId(record_id)})
-    if not new_record:
-        raise HTTPException(status_code=404, detail="Condition record not found")
-
-    return ConditionRecord.parse_obj(new_record)
-
-
-async def update_allergy_record(
-    db: AsyncIOMotorDatabase, record_id: str, data: dict
-) -> AllergyRecord:
-    try:
-        record = AllergyRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing allergy record: {e}"
-        )
-
-    update_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
-        update_data["resident_id"]
-    ):
-        update_data["resident_id"] = ObjectId(update_data["resident_id"])
-
-    for field, value in update_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            update_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["allergies"].update_one(
-        {"_id": ObjectId(record_id)}, {"$set": update_data}
-    )
-    if result.modified_count == 0:
-        existing = await db["allergies"].find_one({"_id": ObjectId(record_id)})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Allergy record not found")
-
-    new_record = await db["allergies"].find_one({"_id": ObjectId(record_id)})
-    if not new_record:
-        raise HTTPException(status_code=404, detail="Allergy record not found")
-
-    return AllergyRecord.parse_obj(new_record)
-
-
-async def update_chronic_illness_record(
-    db: AsyncIOMotorDatabase, record_id: str, data: dict
-) -> ChronicIllnessRecord:
-    try:
-        record = ChronicIllnessRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing chronic illness record: {e}"
-        )
-
-    update_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
-        update_data["resident_id"]
-    ):
-        update_data["resident_id"] = ObjectId(update_data["resident_id"])
-
-    for field, value in update_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            update_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["chronic_illnesses"].update_one(
-        {"_id": ObjectId(record_id)}, {"$set": update_data}
-    )
-    if result.modified_count == 0:
-        existing = await db["chronic_illnesses"].find_one({"_id": ObjectId(record_id)})
-        if not existing:
+        try:
+            record = model_class.model_validate(update_data)
+        except Exception as e:
             raise HTTPException(
-                status_code=404, detail="Chronic illness record not found"
+                status_code=400,
+                detail=f"Invalid data for {record_type} record: {str(e)}",
             )
 
-    new_record = await db["chronic_illnesses"].find_one({"_id": ObjectId(record_id)})
-    if not new_record:
-        raise HTTPException(status_code=404, detail="Chronic illness record not found")
+        update_dict = record.model_dump()
 
-    return ChronicIllnessRecord.parse_obj(new_record)
+        for field, value in update_dict.items():
+            if isinstance(value, datetime.date) and not isinstance(
+                value, datetime.datetime
+            ):
+                update_dict[field] = datetime.datetime.combine(value, datetime.time.min)
 
-
-async def update_surgical_history_record(
-    db: AsyncIOMotorDatabase, record_id: str, data: dict
-) -> SurgicalHistoryRecord:
-    try:
-        record = SurgicalHistoryRecord.parse_obj(data)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Error parsing surgical history record: {e}"
+        result = await db[collection_name].update_one(
+            {"_id": ObjectId(record_id), "resident_id": ObjectId(resident_id)},
+            {"$set": update_dict},
         )
 
-    update_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
-        update_data["resident_id"]
-    ):
-        update_data["resident_id"] = ObjectId(update_data["resident_id"])
-
-    for field, value in update_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            update_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["surgical_history"].update_one(
-        {"_id": ObjectId(record_id)}, {"$set": update_data}
-    )
-    if result.modified_count == 0:
-        existing = await db["surgical_history"].find_one({"_id": ObjectId(record_id)})
-        if not existing:
+        if result.matched_count == 0:
             raise HTTPException(
-                status_code=404, detail="Surgical history record not found"
+                status_code=404,
+                detail=f"No {record_type} record found with ID {record_id} for resident {resident_id}",
             )
 
-    new_record = await db["surgical_history"].find_one({"_id": ObjectId(record_id)})
-    if not new_record:
-        raise HTTPException(status_code=404, detail="Surgical history record not found")
+        updated_record = await db[collection_name].find_one(
+            {"_id": ObjectId(record_id)}
+        )
+        if not updated_record:
+            raise HTTPException(status_code=404, detail="Record not found after update")
 
-    return SurgicalHistoryRecord.parse_obj(new_record)
+        return model_class.model_validate(updated_record)
 
-
-async def update_immunization_record(
-    db: AsyncIOMotorDatabase, record_id: str, data: dict
-) -> ImmunizationRecord:
-    try:
-        record = ImmunizationRecord.parse_obj(data)
+    except KeyError:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid record type: {record_type}"
+        )
     except Exception as e:
         raise HTTPException(
-            status_code=400, detail=f"Error parsing immunization record: {e}"
+            status_code=500, detail=f"Error updating medical record: {str(e)}"
         )
-
-    update_data = {
-        k: v for k, v in record.dict(exclude={"id"}).items() if v is not None
-    }
-
-    if isinstance(update_data.get("resident_id"), str) and ObjectId.is_valid(
-        update_data["resident_id"]
-    ):
-        update_data["resident_id"] = ObjectId(update_data["resident_id"])
-
-    for field, value in update_data.items():
-        if isinstance(value, datetime.date) and not isinstance(
-            value, datetime.datetime
-        ):
-            update_data[field] = datetime.datetime.combine(value, datetime.time.min)
-
-    result = await db["immunizations"].update_one(
-        {"_id": ObjectId(record_id)}, {"$set": update_data}
-    )
-    if result.modified_count == 0:
-        existing = await db["immunizations"].find_one({"_id": ObjectId(record_id)})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Immunization record not found")
-
-    new_record = await db["immunizations"].find_one({"_id": ObjectId(record_id)})
-    if not new_record:
-        raise HTTPException(status_code=404, detail="Immunization record not found")
-
-    return ImmunizationRecord.parse_obj(new_record)
-
-
-async def delete_medical_record_by_id(db: AsyncIOMotorDatabase, record_id: str) -> dict:
-    if not ObjectId.is_valid(record_id):
-        raise HTTPException(status_code=400, detail="Invalid record ID")
-
-    collections = [
-        "conditions",
-        "allergies",
-        "chronic_illnesses",
-        "surgical_history",
-        "immunizations",
-    ]
-    for collection in collections:
-        result = await db[collection].delete_one({"_id": ObjectId(record_id)})
-        if result.deleted_count > 0:
-            return {"detail": f"Record deleted from {collection}."}
-
-    raise HTTPException(
-        status_code=404, detail="Record not found in any medical record collection"
-    )
 
 
 async def get_medical_records_by_resident(
     db: AsyncIOMotorDatabase, resident_id: str
-) -> List[
-    Union[
-        ConditionRecord,
-        AllergyRecord,
-        ChronicIllnessRecord,
-        SurgicalHistoryRecord,
-        ImmunizationRecord,
-    ]
-]:
+) -> List[MedicalRecordUnion]:
     try:
+        all_records = []
 
-        query = {
-            "$or": [
-                {"resident_id": resident_id},
-                {
-                    "resident_id": (
-                        ObjectId(resident_id)
-                        if ObjectId.is_valid(resident_id)
-                        else None
-                    )
-                },
-            ]
-        }
+        for record_type, info in RECORD_TYPE_MAP.items():
+            collection_name = info["collection"]
+            model_class = info["model"]
 
-        conditions = []
-        async for record in db["conditions"].find(query):
-            conditions.append(ConditionRecord.parse_obj(record))
+            async for record in db[collection_name].find(
+                {"resident_id": ObjectId(resident_id)}
+            ):
+                all_records.append(model_class.model_validate(record))
 
-        allergies = []
-        async for record in db["allergies"].find(query):
-            allergies.append(AllergyRecord.parse_obj(record))
-
-        chronic = []
-        async for record in db["chronic_illnesses"].find(query):
-            chronic.append(ChronicIllnessRecord.parse_obj(record))
-
-        surgical = []
-        async for record in db["surgical_history"].find(query):
-            surgical.append(SurgicalHistoryRecord.parse_obj(record))
-
-        immunizations = []
-        async for record in db["immunizations"].find(query):
-            immunizations.append(ImmunizationRecord.parse_obj(record))
-
-        return conditions + allergies + chronic + surgical + immunizations
+        return all_records
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error fetching medical records: {e}"
+            status_code=500, detail=f"Error fetching medical records: {str(e)}"
+        )
+
+
+async def delete_medical_record(
+    db: AsyncIOMotorDatabase,
+    record_id: str,
+    record_type: MedicalRecordType,
+    resident_id: str,
+) -> dict:
+    try:
+        if not ObjectId.is_valid(record_id):
+            raise HTTPException(status_code=400, detail="Invalid record ID format")
+
+        collection_name = RECORD_TYPE_MAP[record_type]["collection"]
+
+        result = await db[collection_name].delete_one(
+            {"_id": ObjectId(record_id), "resident_id": ObjectId(resident_id)}
+        )
+
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No {record_type} record found with ID {record_id} for resident {resident_id}",
+            )
+
+        return {"detail": f"{record_type} record successfully deleted"}
+
+    except KeyError:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid record type: {record_type}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error deleting medical record: {str(e)}"
         )

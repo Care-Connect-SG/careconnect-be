@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from typing import Optional
 from models.base import ModelConfig, PyObjectId
@@ -28,8 +28,8 @@ class ActivityUpdate(ActivityBase):
 class ActivityResponse(ActivityBase, ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     created_by: Optional[PyObjectId] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ActivityFilter(BaseModel):
