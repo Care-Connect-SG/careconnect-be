@@ -5,7 +5,7 @@ from models.base import ModelConfig, PyObjectId
 from enum import Enum
 
 
-class MedicalRecordType(str, Enum):
+class MedicalHistoryType(str, Enum):
     CONDITION = "condition"
     ALLERGY = "allergy"
     CHRONIC_ILLNESS = "chronic"
@@ -13,14 +13,14 @@ class MedicalRecordType(str, Enum):
     IMMUNIZATION = "immunization"
 
 
-class BaseMedicalRecord(ModelConfig):
+class BaseMedicalHistory(ModelConfig):
     id: Optional[PyObjectId] = Field(default=None, alias="_id")
     resident_id: Optional[PyObjectId] = None
     created_at: date = Field(default_factory=date.today)
     updated_at: date = Field(default_factory=date.today)
 
 
-class ConditionRecord(BaseMedicalRecord):
+class ConditionRecord(BaseMedicalHistory):
     condition_name: str
     date_of_diagnosis: date
     treating_physician: str
@@ -28,7 +28,7 @@ class ConditionRecord(BaseMedicalRecord):
     current_status: str
 
 
-class AllergyRecord(BaseMedicalRecord):
+class AllergyRecord(BaseMedicalHistory):
     allergen: str
     reaction_description: str
     date_first_noted: date
@@ -36,7 +36,7 @@ class AllergyRecord(BaseMedicalRecord):
     management_notes: Optional[str] = None
 
 
-class ChronicIllnessRecord(BaseMedicalRecord):
+class ChronicIllnessRecord(BaseMedicalHistory):
     illness_name: str
     date_of_onset: date
     managing_physician: str
@@ -44,7 +44,7 @@ class ChronicIllnessRecord(BaseMedicalRecord):
     monitoring_parameters: str
 
 
-class SurgicalHistoryRecord(BaseMedicalRecord):
+class SurgicalHistoryRecord(BaseMedicalHistory):
     procedure: str
     surgery_date: date
     surgeon: str
@@ -52,20 +52,20 @@ class SurgicalHistoryRecord(BaseMedicalRecord):
     complications: Optional[str] = None
 
 
-class ImmunizationRecord(BaseMedicalRecord):
+class ImmunizationRecord(BaseMedicalHistory):
     vaccine: str
     date_administered: date
     administering_facility: str
     next_due_date: Optional[date] = None
 
 
-class CreateMedicalRecordRequest(BaseModel):
-    record_type: MedicalRecordType
+class MedicalHistoryCreate(BaseModel):
+    record_type: MedicalHistoryType
     resident_id: Optional[PyObjectId] = None
     record_data: dict
 
 
-MedicalRecordUnion = Union[
+MedicalHistoryUnion = Union[
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,

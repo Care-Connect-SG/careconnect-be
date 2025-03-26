@@ -4,43 +4,43 @@ from fastapi import HTTPException
 from bson import ObjectId
 from typing import List, Union, Dict, Type
 from models.medical_history import (
-    MedicalRecordType,
+    MedicalHistoryType,
     ConditionRecord,
     AllergyRecord,
     ChronicIllnessRecord,
     SurgicalHistoryRecord,
     ImmunizationRecord,
-    BaseMedicalRecord,
-    MedicalRecordUnion,
+    BaseMedicalHistory,
+    MedicalHistoryUnion,
 )
 
 
 RECORD_TYPE_MAP: Dict[
-    MedicalRecordType, Dict[str, Union[str, Type[BaseMedicalRecord]]]
+    MedicalHistoryType, Dict[str, Union[str, Type[BaseMedicalHistory]]]
 ] = {
-    MedicalRecordType.CONDITION: {"collection": "conditions", "model": ConditionRecord},
-    MedicalRecordType.ALLERGY: {"collection": "allergies", "model": AllergyRecord},
-    MedicalRecordType.CHRONIC_ILLNESS: {
+    MedicalHistoryType.CONDITION: {"collection": "conditions", "model": ConditionRecord},
+    MedicalHistoryType.ALLERGY: {"collection": "allergies", "model": AllergyRecord},
+    MedicalHistoryType.CHRONIC_ILLNESS: {
         "collection": "chronic_illnesses",
         "model": ChronicIllnessRecord,
     },
-    MedicalRecordType.SURGICAL: {
+    MedicalHistoryType.SURGICAL: {
         "collection": "surgical_history",
         "model": SurgicalHistoryRecord,
     },
-    MedicalRecordType.IMMUNIZATION: {
+    MedicalHistoryType.IMMUNIZATION: {
         "collection": "immunizations",
         "model": ImmunizationRecord,
     },
 }
 
 
-async def create_medical_record(
+async def create_medical_history(
     db: AsyncIOMotorDatabase,
-    record_type: MedicalRecordType,
+    record_type: MedicalHistoryType,
     resident_id: str,
     record_data: dict,
-) -> MedicalRecordUnion:
+) -> MedicalHistoryUnion:
     try:
         record_info = RECORD_TYPE_MAP[record_type]
         model_class = record_info["model"]
@@ -86,13 +86,13 @@ async def create_medical_record(
         )
 
 
-async def update_medical_record(
+async def update_medical_history(
     db: AsyncIOMotorDatabase,
     record_id: str,
-    record_type: MedicalRecordType,
+    record_type: MedicalHistoryType,
     resident_id: str,
     update_data: dict,
-) -> MedicalRecordUnion:
+) -> MedicalHistoryUnion:
     try:
         if not ObjectId.is_valid(record_id):
             raise HTTPException(status_code=400, detail="Invalid record ID format")
@@ -149,9 +149,9 @@ async def update_medical_record(
         )
 
 
-async def get_medical_records_by_resident(
+async def get_medical_history_by_resident(
     db: AsyncIOMotorDatabase, resident_id: str
-) -> List[MedicalRecordUnion]:
+) -> List[MedicalHistoryUnion]:
     try:
         all_records = []
 
@@ -172,10 +172,10 @@ async def get_medical_records_by_resident(
         )
 
 
-async def delete_medical_record(
+async def delete_medical_history(
     db: AsyncIOMotorDatabase,
     record_id: str,
-    record_type: MedicalRecordType,
+    record_type: MedicalHistoryType,
     resident_id: str,
 ) -> dict:
     try:

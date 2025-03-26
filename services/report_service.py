@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any
 from bson import ObjectId
 from fastapi import HTTPException
 from models.report import ReportCreate, ReportResponse
