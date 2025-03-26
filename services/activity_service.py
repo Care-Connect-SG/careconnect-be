@@ -107,7 +107,7 @@ async def update_activity(
                 status_code=403, detail="Not authorized to update this activity"
             )
 
-        update_data = activity_update.dict(exclude_unset=True)
+        update_data = activity_update.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.utcnow()
 
         result = await db[collection_name].update_one(

@@ -64,8 +64,7 @@ async def list_residents(
     cursor = db["resident_info"].find(query).skip(skip).limit(limit)
     residents = []
     async for record in cursor:
-        record["_id"] = str(record["_id"])
-        residents.append(RegistrationResponse.parse_obj(record))
+        residents.append(RegistrationResponse(**record))
     return residents
 
 

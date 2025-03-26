@@ -10,10 +10,7 @@ async def create_careplan(db, resident_id: str, careplan_data: CarePlanCreate):
     except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
-    careplan_dict = {
-        k: v for k, v in careplan_data.dict().items() if k != "id" and v is not None
-    }
-
+    careplan_dict = careplan_data.model_dump(exclude_none=True)
     careplan_dict["resident_id"] = ObjectId(resident_id)
 
     if "created_date" in careplan_dict and isinstance(
@@ -66,11 +63,7 @@ async def update_careplan(
     except:
         raise HTTPException(status_code=400, detail="Invalid careplan ID")
 
-    update_dict = {
-        k: v
-        for k, v in update_data.dict(exclude_unset=True).items()
-        if k != "id" and v is not None
-    }
+    update_dict = update_data.model_dump(exclude_unset=True)
 
     if "created_date" in update_dict and isinstance(
         update_dict["created_date"], datetime.date

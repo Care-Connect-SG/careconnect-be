@@ -10,6 +10,5 @@ PyObjectId = Annotated[str, BeforeValidator(lambda x: str(x))]
 class ModelConfig(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
-        arbitrary_types_allowed=True,
-        json_schema_extra={"example": {"_id": "ObjectId"}},
+        json_encoders={ObjectId: str},
     )

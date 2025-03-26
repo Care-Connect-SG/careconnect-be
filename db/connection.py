@@ -33,4 +33,4 @@ async def lifespan(app: FastAPI):
     finally:
         if hasattr(app, "mongodb_client"):
             app.mongodb_client.close()
-            print("🛑 Database disconnected.")
+            print("🛑 Databases disconnected.")

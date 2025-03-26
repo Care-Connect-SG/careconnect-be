@@ -12,7 +12,7 @@ async def create_wellness_report(
     except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
-    report_dict = report_data.dict()
+    report_dict = report_data.model_dump()
     report_dict["resident_id"] = ObjectId(resident_id)
 
     if "date" in report_dict and isinstance(report_dict["date"], datetime.date):
@@ -87,7 +87,7 @@ async def update_wellness_report(
     except:
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
-    update_dict = update_data.dict(exclude_unset=True)
+    update_dict = update_data.model_dump(exclude_unset=True)
 
     if "resident_id" in update_dict:
         try:

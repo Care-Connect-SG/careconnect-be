@@ -10,13 +10,9 @@ async def create_medication(db, resident_id: str, medication_data: MedicationCre
     except:
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
-    medication_dict = {
-        k: v for k, v in medication_data.dict().items() if k != "id" and v is not None
-    }
-
+    medication_dict = medication_data.model_dump(exclude_unset=True)
     medication_dict["resident_id"] = ObjectId(resident_id)
 
-    # Convert date fields to datetime
     if "start_date" in medication_dict and isinstance(
         medication_dict["start_date"], datetime.date
     ):
@@ -85,17 +81,11 @@ async def update_medication(
     except:
         raise HTTPException(status_code=400, detail="Invalid medication ID")
 
-    update_dict = {
-        k: v
-        for k, v in update_data.dict(exclude_unset=True).items()
-        if k != "id" and v is not None
-    }
+    update_dict = update_data.model_dump(exclude_unset=True)
 
-    # If resident_id is included in update, convert to ObjectId
     if "resident_id" in update_dict and ObjectId.is_valid(update_dict["resident_id"]):
         update_dict["resident_id"] = ObjectId(update_dict["resident_id"])
 
-    # Convert date fields
     for date_field in ["start_date", "end_date"]:
         if date_field in update_dict and update_dict[date_field]:
             if isinstance(update_dict[date_field], datetime.date):
