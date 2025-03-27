@@ -13,7 +13,7 @@ async def create_activity(
 ) -> ActivityResponse:
     try:
         db = await get_db(request)
-        activity_dict = activity.model_dump()
+        activity_dict = activity.model_dump(exclude_unset=True)
         activity_dict["created_by"] = ObjectId(user_id)
         activity_dict["created_at"] = datetime.now(timezone.utc)
         activity_dict["updated_at"] = datetime.now(timezone.utc)

@@ -27,6 +27,7 @@ router = APIRouter(
     status_code=201,
     summary="Create a new medical record",
     description="Create a new medical record of the specified type for a resident",
+    response_model_by_alias=False,
 )
 @limiter.limit("10/second")
 async def create_medical_history_endpoint(
@@ -47,6 +48,7 @@ async def create_medical_history_endpoint(
     response_model=MedicalHistoryUnion,
     summary="Update a medical record",
     description="Update an existing medical record by its ID",
+    response_model_by_alias=False,
 )
 async def update_medical_history_endpoint(
     record_id: str,
@@ -69,6 +71,7 @@ async def update_medical_history_endpoint(
     response_model=List[MedicalHistoryUnion],
     summary="Get resident's medical records",
     description="Retrieve all medical records for a specific resident",
+    response_model_by_alias=False,
 )
 @limiter.limit("10/second")
 async def get_medical_history_by_resident_endpoint(
@@ -86,13 +89,12 @@ async def get_medical_history_by_resident_endpoint(
 )
 async def delete_history(
     record_id: str,
-    record_type: MedicalHistoryType,
-    resident_id: str = Query(..., description="ID of the resident"),
+    delete_data: dict = Body(...),
     db: AsyncIOMotorDatabase = Depends(get_resident_db),
-) -> dict:
+):
     return await delete_medical_history(
         db=db,
         record_id=record_id,
-        record_type=record_type,
-        resident_id=resident_id,
+        record_type=delete_data["record_type"],
+        resident_id=delete_data["resident_id"],
     )

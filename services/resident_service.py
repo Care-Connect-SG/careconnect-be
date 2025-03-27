@@ -19,7 +19,7 @@ async def create_residentInfo(
             status_code=400, detail="Registration for this NRIC already exists"
         )
     room_number = registration_data.room_number or str(random.randint(100, 999))
-    registration_dict = registration_data.model_dump()
+    registration_dict = registration_data.model_dump(exclude_unset=True)
     registration_dict.pop("_id", None)
     if isinstance(registration_dict.get("date_of_birth"), datetime.date):
         registration_dict["date_of_birth"] = datetime.datetime.combine(
@@ -71,7 +71,7 @@ async def update_resident(
     if not ObjectId.is_valid(resident_id):
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
-    update_dict = update_data.model_dump()
+    update_dict = update_data.model_dump(exclude_unset=True)
 
     if (
         "date_of_birth" in update_dict

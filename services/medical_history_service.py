@@ -18,7 +18,10 @@ from models.medical_history import (
 RECORD_TYPE_MAP: Dict[
     MedicalHistoryType, Dict[str, Union[str, Type[BaseMedicalHistory]]]
 ] = {
-    MedicalHistoryType.CONDITION: {"collection": "conditions", "model": ConditionRecord},
+    MedicalHistoryType.CONDITION: {
+        "collection": "conditions",
+        "model": ConditionRecord,
+    },
     MedicalHistoryType.ALLERGY: {"collection": "allergies", "model": AllergyRecord},
     MedicalHistoryType.CHRONIC_ILLNESS: {
         "collection": "chronic_illnesses",
@@ -46,7 +49,7 @@ async def create_medical_history(
         model_class = record_info["model"]
         collection_name = record_info["collection"]
 
-        record_data["resident_id"] = ObjectId(resident_id)
+        record_data["resident_id"] = resident_id
         record_data["created_at"] = datetime.date.today()
         record_data["updated_at"] = datetime.date.today()
 
@@ -58,7 +61,8 @@ async def create_medical_history(
                 detail=f"Invalid data for {record_type} record: {str(e)}",
             )
 
-        insert_data = record.model_dump()
+        insert_data = record.model_dump(exclude_unset=True)
+        insert_data["resident_id"] = ObjectId(resident_id)
 
         for field, value in insert_data.items():
             if isinstance(value, datetime.date) and not isinstance(
@@ -101,24 +105,39 @@ async def update_medical_history(
         model_class = record_info["model"]
         collection_name = record_info["collection"]
 
-        update_data["resident_id"] = ObjectId(resident_id)
-        update_data["updated_at"] = datetime.date.today()
+        update_dict = {}
 
-        try:
-            record = model_class.model_validate(update_data)
-        except Exception as e:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid data for {record_type} record: {str(e)}",
-            )
+        update_dict["resident_id"] = ObjectId(resident_id)
+        update_dict["updated_at"] = datetime.date.today()
 
-        update_dict = record.model_dump()
+        for key, value in update_data.items():
+            update_dict[key] = value
 
         for field, value in update_dict.items():
             if isinstance(value, datetime.date) and not isinstance(
                 value, datetime.datetime
             ):
                 update_dict[field] = datetime.datetime.combine(value, datetime.time.min)
+            elif (
+                isinstance(value, str)
+                and field.endswith("_date")
+                or field
+                in [
+                    "date_of_diagnosis",
+                    "date_first_noted",
+                    "date_of_onset",
+                    "surgery_date",
+                    "date_administered",
+                    "next_due_date",
+                ]
+            ):
+                try:
+                    date_obj = datetime.date.fromisoformat(value)
+                    update_dict[field] = datetime.datetime.combine(
+                        date_obj, datetime.time.min
+                    )
+                except (ValueError, TypeError):
+                    pass
 
         result = await db[collection_name].update_one(
             {"_id": ObjectId(record_id), "resident_id": ObjectId(resident_id)},
