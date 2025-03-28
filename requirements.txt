@@ -24,10 +24,13 @@ html5lib==1.1
 idna==3.10
 importlib_resources==6.4.5
 isort==5.13.2
+langchain==0.1.0
+langchain-openai==0.0.5
 limits==3.13.0
 mccabe==0.7.0
 motor==3.6.1
 mypy-extensions==1.0.0
+openai==1.13.3
 packaging==24.2
 passlib==1.7.4
 pathspec==0.12.1

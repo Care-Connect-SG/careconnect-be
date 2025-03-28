@@ -17,7 +17,9 @@ from services.task_service import (
     accept_task_reassignment,
     reject_task_reassignment,
     handle_task_self,
+    get_ai_task_suggestion,
 )
+from services.ai_task_service import get_enhanced_ai_task_suggestion
 from utils.limiter import limiter
 from services.user_service import require_roles, get_current_user
 from typing import Optional, List
@@ -271,3 +273,37 @@ async def handle_task_self_route(
 ):
     updated_task = await handle_task_self(db, task_id, current_user["id"])
     return updated_task
+
+
+@router.post(
+    "/ai-suggest",
+    summary="Get AI suggestions for a new task",
+    response_model=TaskCreate,
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("5/minute")
+async def get_ai_suggestion(
+    request: Request,
+    resident_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    suggestion = await get_ai_task_suggestion(db, resident_id, current_user)
+    return suggestion
+
+
+@router.post(
+    "/enhanced-ai-suggest",
+    summary="Get enhanced AI suggestions using GPT-4o Mini",
+    response_model=TaskCreate,
+    status_code=status.HTTP_200_OK,
+)
+@limiter.limit("5/minute")
+async def get_enhanced_ai_suggestion(
+    request: Request,
+    resident_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    suggestion = await get_enhanced_ai_task_suggestion(db, resident_id, current_user)
+    return suggestion

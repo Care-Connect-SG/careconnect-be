@@ -1,5 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
+from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate, TaskPriority, TaskCategory
 from bson import ObjectId
 from fastapi import HTTPException, status
 from typing import List
@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
 from dateutil.relativedelta import relativedelta
+from collections import Counter
 
 
 async def create_task(
@@ -573,3 +574,72 @@ async def handle_task_self(
     updated_task = await enrich_task_with_room(db, updated_task)
 
     return TaskResponse(**updated_task)
+
+
+async def get_ai_task_suggestion(
+    db: AsyncIOMotorDatabase,
+    resident_id: str,
+    current_user: dict,
+) -> TaskCreate:
+    # Get resident's past tasks
+    past_tasks = await db.tasks.find({
+        "resident": ObjectId(resident_id),
+        "status": TaskStatus.COMPLETED
+    }).sort("created_at", -1).limit(10).to_list(length=10)
+
+    # Get resident's medical history
+    resident_db = db.client.get_database("resident")
+    medical_history = await resident_db.medical_history.find({
+        "resident_id": ObjectId(resident_id)
+    }).sort("created_at", -1).limit(5).to_list(length=5)
+
+    # Analyze task patterns
+    task_categories = Counter()
+    task_priorities = Counter()
+    task_titles = Counter()
+    
+    for task in past_tasks:
+        if task.get("category"):
+            task_categories[task["category"]] += 1
+        if task.get("priority"):
+            task_priorities[task["priority"]] += 1
+        if task.get("task_title"):
+            task_titles[task["task_title"]] += 1
+
+    # Get most common category and priority
+    most_common_category = task_categories.most_common(1)[0][0] if task_categories else None
+    most_common_priority = task_priorities.most_common(1)[0][0] if task_priorities else None
+    most_common_title = task_titles.most_common(1)[0][0] if task_titles else None
+
+    # Analyze medical history for urgency
+    is_urgent = False
+    needs_attention = False
+    recommendation_reason = []
+
+    if medical_history:
+        latest_record = medical_history[0]
+        if latest_record.get("risk_level") == "High":
+            is_urgent = True
+            needs_attention = True
+            recommendation_reason.append("High risk level detected in medical history")
+
+    # Create task suggestion
+    now = datetime.now(timezone.utc)
+    suggestion = TaskCreate(
+        task_title=most_common_title or "Regular care check",
+        task_details="Based on resident's care history and medical records",
+        status=TaskStatus.ASSIGNED,
+        priority=most_common_priority or TaskPriority.MEDIUM,
+        category=most_common_category or TaskCategory.MEALS,
+        residents=[ObjectId(resident_id)],
+        start_date=now,
+        due_date=now + timedelta(hours=2),
+        is_ai_generated=True,
+        assigned_to=ObjectId(current_user["id"]),
+    )
+
+    # Add recommendation reason
+    if recommendation_reason:
+        suggestion.ai_recommendation_reason = " | ".join(recommendation_reason)
+
+    return suggestion
