@@ -18,3 +18,10 @@ class WellnessReportCreate(BaseModel):
 class WellnessReportResponse(WellnessReportCreate, ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     resident_id: Optional[PyObjectId] = None
+    created_at: Optional[date] = None
+    updated_at: Optional[date] = None
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {PyObjectId: str}
