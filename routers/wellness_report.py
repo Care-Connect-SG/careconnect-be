@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, status, HTTPException
 from typing import List
 from models.wellness_report import WellnessReportCreate, WellnessReportResponse
 from services.wellness_report_service import (
@@ -8,8 +8,10 @@ from services.wellness_report_service import (
     update_wellness_report,
     delete_wellness_report,
 )
+from services.ai_wellness_report_service import get_ai_wellness_report_suggestion
 from db.connection import get_resident_db
 from utils.limiter import limiter
+from services.user_service import require_roles, get_current_user
 
 router = APIRouter(
     prefix="/residents/{resident_id}/wellness-reports", tags=["Wellness Reports"]
@@ -23,6 +25,8 @@ async def add_report(
     resident_id: str,
     report: WellnessReportCreate,
     db=Depends(get_resident_db),
+    current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
     return await create_wellness_report(db, resident_id, report)
 
@@ -33,6 +37,8 @@ async def get_reports(
     request: Request,
     resident_id: str,
     db=Depends(get_resident_db),
+    current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
     return await get_reports_by_resident(db, resident_id)
 
@@ -44,6 +50,8 @@ async def get_report(
     resident_id: str,
     report_id: str,
     db=Depends(get_resident_db),
+    current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
     return await get_wellness_report_by_id(db, resident_id, report_id)
 
@@ -56,6 +64,8 @@ async def update_report(
     report_id: str,
     report: WellnessReportCreate,
     db=Depends(get_resident_db),
+    current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
     return await update_wellness_report(db, resident_id, report_id, report)
 
@@ -67,7 +77,34 @@ async def delete_report(
     resident_id: str,
     report_id: str,
     db=Depends(get_resident_db),
+    current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Admin"])),
 ):
     print(f"Delete request received for report_id: {report_id}")  # Debug log
     await delete_wellness_report(db, resident_id, report_id)
     return None
+
+
+@router.post("/generate-ai", response_model=WellnessReportResponse, response_model_by_alias=False)
+@limiter.limit("5/minute")
+async def generate_ai_report(
+    request: Request,
+    resident_id: str,
+    db=Depends(get_resident_db),
+    current_user: dict = Depends(get_current_user),
+    user: dict = Depends(require_roles(["Admin", "Nurse"])),
+):
+    """
+    Generate an AI-powered wellness report for a resident based on their medical history and past reports.
+    """
+    try:
+        # Get AI-generated suggestion
+        ai_suggestion = await get_ai_wellness_report_suggestion(db, resident_id, current_user)
+        
+        # Create the report in the database
+        return await create_wellness_report(db, resident_id, ai_suggestion)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate AI report: {str(e)}"
+        )
