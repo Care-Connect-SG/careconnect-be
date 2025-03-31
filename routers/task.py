@@ -51,7 +51,7 @@ async def create_new_task(
     response_model=List[TaskResponse],
     response_model_by_alias=False,
 )
-@limiter.limit("100/minute")
+# @limiter.limit("100/minute")
 async def fetch_tasks(
     request: Request,
     search: Optional[str] = None,

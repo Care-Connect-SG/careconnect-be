@@ -24,6 +24,7 @@ class TaskCategory(str, Enum):
     MEDICATION = "Medication"
     THERAPY = "Therapy"
     OUTING = "Outing"
+    OTHERS = "Others"
 
 
 class Recurrence(str, Enum):
