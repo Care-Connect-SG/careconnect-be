@@ -138,7 +138,7 @@ async def modify_task_assignment(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def complete_task(
+async def complete_task_route(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -154,7 +154,7 @@ async def complete_task(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def reopen_task(
+async def reopen_task_route(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),

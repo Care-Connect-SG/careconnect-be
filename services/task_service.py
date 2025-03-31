@@ -230,16 +230,29 @@ async def update_task(
                     {"_id": ObjectId(task_id)}, {"$set": date_fields}
                 )
 
+            tasks_in_series = await db.tasks.find({"series_id": series_id}).to_list(
+                length=100
+            )
+            for task in tasks_in_series:
+                await update_task_status(db, task)
+
             updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
             return TaskResponse(**updated_task_doc)
 
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Task not found")
+    if result.modified_count == 0 and not update_data:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    elif result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found or no changes made")
+    else:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
 
-    updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if "status" not in update_data:
+        updated_task_doc = await update_task_status(db, updated_task_doc)
+
+    updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
     return TaskResponse(**updated_task_doc)
 
 
@@ -573,3 +586,40 @@ async def handle_task_self(
     updated_task = await enrich_task_with_room(db, updated_task)
 
     return TaskResponse(**updated_task)
+
+
+async def update_task_status(db: AsyncIOMotorDatabase, task: dict) -> dict:
+    now = datetime.now(timezone.utc)
+    task_id = task["_id"]
+    current_status = task.get("status")
+
+    if current_status == TaskStatus.COMPLETED:
+        return task
+
+    if current_status in [
+        TaskStatus.REASSIGNMENT_REQUESTED,
+        TaskStatus.REASSIGNMENT_REJECTED,
+    ]:
+        return task
+
+    status_update = None
+
+    if (
+        "due_date" in task
+        and task["due_date"] < now
+        and current_status != TaskStatus.DELAYED
+    ):
+        status_update = TaskStatus.DELAYED
+
+    elif (
+        "due_date" in task
+        and task["due_date"] >= now
+        and current_status != TaskStatus.ASSIGNED
+    ):
+        status_update = TaskStatus.ASSIGNED
+
+    if status_update:
+        await db.tasks.update_one({"_id": task_id}, {"$set": {"status": status_update}})
+        task["status"] = status_update
+
+    return task
