@@ -51,21 +51,31 @@ async def create_new_task(
     response_model=List[TaskResponse],
     response_model_by_alias=False,
 )
-@limiter.limit("100/minute")
+# @limiter.limit("100/minute")
 async def fetch_tasks(
     request: Request,
     search: Optional[str] = None,
-    assigned_to: Optional[str] = None,
+    nurses: Optional[str] = None,
     status: Optional[str] = None,
     priority: Optional[str] = None,
     category: Optional[str] = None,
-    date: Optional[str] = None,  # New query parameter for date (YYYY-MM-DD)
+    date: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db),
     user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
-    if user.get("role") != "Admin":
-        assigned_to = user.get("id")
-    tasks = await get_tasks(db, assigned_to, status, priority, category, search, date)
+    user_id = user.get("id")
+    user_role = user.get("role")
+    assigned_to = None
+    if user_role == "Admin" and nurses and nurses != "undefined":
+        assigned_to = nurses
+
+    if user_role != "Admin":
+        assigned_to = user_id
+
+    tasks = await get_tasks(
+        db, assigned_to, status, priority, category, search, date, user_role
+    )
+
     return tasks
 
 
@@ -138,7 +148,7 @@ async def modify_task_assignment(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def complete_task(
+async def complete_task_route(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -154,7 +164,7 @@ async def complete_task(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def reopen_task(
+async def reopen_task_route(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),

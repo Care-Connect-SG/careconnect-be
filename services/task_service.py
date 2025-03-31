@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
 from dateutil.relativedelta import relativedelta
+from services.group_service import get_user_groups
 
 
 async def create_task(
@@ -113,6 +114,76 @@ async def create_recurring_task(
     return tasks_created
 
 
+# async def get_tasks(
+#     db: AsyncIOMotorDatabase,
+#     assigned_to: str = None,
+#     status: str = None,
+#     priority: str = None,
+#     category: str = None,
+#     search: str = None,
+#     date: str = None,
+# ) -> List[TaskResponse]:
+#     filters = {}
+
+#     if assigned_to:
+#         if "," in assigned_to:
+#             try:
+#                 nurse_ids = [ObjectId(id.strip()) for id in assigned_to.split(",") if id.strip()]
+#                 if nurse_ids:
+#                     filters["assigned_to"] = {"$in": nurse_ids}
+#             except Exception as e:
+#                 raise HTTPException(
+#                     status_code=400, detail=f"Error processing nurse IDs: {e}"
+#                 )
+#         else:
+#             try:
+#                 filters["assigned_to"] = ObjectId(assigned_to)
+#             except Exception as e:
+#                 raise HTTPException(
+#                     status_code=400, detail=f"Error converting nurse ID to ObjectId: {e}"
+#                 )
+
+#     if status:
+#         filters["status"] = status
+#     if priority:
+#         filters["priority"] = priority
+#     if category:
+#         filters["category"] = category
+#     if search:
+#         filters["$or"] = [
+#             {"task_title": {"$regex": search, "$options": "i"}},
+#             {"task_details": {"$regex": search, "$options": "i"}},
+#         ]
+
+#     if date:
+#         try:
+#             date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+#         except Exception:
+#             raise HTTPException(
+#                 status_code=400, detail="Invalid date format. Use YYYY-MM-DD."
+#             )
+#         start_of_day = datetime.combine(
+#             date_obj, datetime.min.time(), tzinfo=timezone.utc
+#         )
+#         end_of_day = datetime.combine(
+#             date_obj, datetime.max.time(), tzinfo=timezone.utc
+#         )
+#     else:
+#         now = datetime.now(timezone.utc)
+#         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+#         end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+#     filters["start_date"] = {"$gte": start_of_day, "$lte": end_of_day}
+
+#     tasks = await db.tasks.find(filters).to_list(length=100)
+#     enriched_tasks = []
+#     for task in tasks:
+#         task = await update_if_overdue(db, task)
+#         task = await enrich_task_with_names(db, task)
+#         enriched_tasks.append(TaskResponse(**task))
+#     return enriched_tasks
+
+
 async def get_tasks(
     db: AsyncIOMotorDatabase,
     assigned_to: str = None,
@@ -121,10 +192,50 @@ async def get_tasks(
     category: str = None,
     search: str = None,
     date: str = None,
+    user_role: str = None,
 ) -> List[TaskResponse]:
     filters = {}
-    if assigned_to:
-        filters["assigned_to"] = ObjectId(assigned_to)
+    if user_role == "Admin":
+        if assigned_to:
+            if "," in assigned_to:
+                try:
+                    nurse_ids = [
+                        ObjectId(id.strip())
+                        for id in assigned_to.split(",")
+                        if id.strip()
+                    ]
+                    if nurse_ids:
+                        filters["assigned_to"] = {"$in": nurse_ids}
+                except Exception as e:
+                    raise Exception(f"Error processing nurse IDs: {e}")
+            else:
+                try:
+                    filters["assigned_to"] = ObjectId(assigned_to)
+                except Exception as e:
+                    raise Exception(f"Error converting nurse ID to ObjectId: {e}")
+    else:
+        try:
+            groups = await get_user_groups(db, assigned_to)
+
+            group_member_ids = set()
+            for group in groups:
+                for member in group.members:
+                    group_member_ids.add(str(member))
+
+            group_member_ids.add(assigned_to)
+
+            obj_ids = [
+                ObjectId(id) for id in group_member_ids if id and id != "undefined"
+            ]
+            if obj_ids:
+                filters["assigned_to"] = {"$in": obj_ids}
+
+        except Exception as e:
+            try:
+                filters["assigned_to"] = ObjectId(assigned_to)
+            except Exception as e2:
+                raise Exception(f"Error converting user ID to ObjectId: {e2}")
+
     if status:
         filters["status"] = status
     if priority:
@@ -230,16 +341,29 @@ async def update_task(
                     {"_id": ObjectId(task_id)}, {"$set": date_fields}
                 )
 
+            tasks_in_series = await db.tasks.find({"series_id": series_id}).to_list(
+                length=100
+            )
+            for task in tasks_in_series:
+                await update_task_status(db, task)
+
             updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
             return TaskResponse(**updated_task_doc)
 
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Task not found")
+    if result.modified_count == 0 and not update_data:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    elif result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found or no changes made")
+    else:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
 
-    updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if "status" not in update_data:
+        updated_task_doc = await update_task_status(db, updated_task_doc)
+
+    updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
     return TaskResponse(**updated_task_doc)
 
 
@@ -573,3 +697,40 @@ async def handle_task_self(
     updated_task = await enrich_task_with_room(db, updated_task)
 
     return TaskResponse(**updated_task)
+
+
+async def update_task_status(db: AsyncIOMotorDatabase, task: dict) -> dict:
+    now = datetime.now(timezone.utc)
+    task_id = task["_id"]
+    current_status = task.get("status")
+
+    if current_status == TaskStatus.COMPLETED:
+        return task
+
+    if current_status in [
+        TaskStatus.REASSIGNMENT_REQUESTED,
+        TaskStatus.REASSIGNMENT_REJECTED,
+    ]:
+        return task
+
+    status_update = None
+
+    if (
+        "due_date" in task
+        and task["due_date"] < now
+        and current_status != TaskStatus.DELAYED
+    ):
+        status_update = TaskStatus.DELAYED
+
+    elif (
+        "due_date" in task
+        and task["due_date"] >= now
+        and current_status != TaskStatus.ASSIGNED
+    ):
+        status_update = TaskStatus.ASSIGNED
+
+    if status_update:
+        await db.tasks.update_one({"_id": task_id}, {"$set": {"status": status_update}})
+        task["status"] = status_update
+
+    return task
