@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
 from dateutil.relativedelta import relativedelta
+from services.group_service import get_user_groups
 
 
 async def create_task(
@@ -113,6 +114,76 @@ async def create_recurring_task(
     return tasks_created
 
 
+# async def get_tasks(
+#     db: AsyncIOMotorDatabase,
+#     assigned_to: str = None,
+#     status: str = None,
+#     priority: str = None,
+#     category: str = None,
+#     search: str = None,
+#     date: str = None,
+# ) -> List[TaskResponse]:
+#     filters = {}
+
+#     if assigned_to:
+#         if "," in assigned_to:
+#             try:
+#                 nurse_ids = [ObjectId(id.strip()) for id in assigned_to.split(",") if id.strip()]
+#                 if nurse_ids:
+#                     filters["assigned_to"] = {"$in": nurse_ids}
+#             except Exception as e:
+#                 raise HTTPException(
+#                     status_code=400, detail=f"Error processing nurse IDs: {e}"
+#                 )
+#         else:
+#             try:
+#                 filters["assigned_to"] = ObjectId(assigned_to)
+#             except Exception as e:
+#                 raise HTTPException(
+#                     status_code=400, detail=f"Error converting nurse ID to ObjectId: {e}"
+#                 )
+
+#     if status:
+#         filters["status"] = status
+#     if priority:
+#         filters["priority"] = priority
+#     if category:
+#         filters["category"] = category
+#     if search:
+#         filters["$or"] = [
+#             {"task_title": {"$regex": search, "$options": "i"}},
+#             {"task_details": {"$regex": search, "$options": "i"}},
+#         ]
+
+#     if date:
+#         try:
+#             date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+#         except Exception:
+#             raise HTTPException(
+#                 status_code=400, detail="Invalid date format. Use YYYY-MM-DD."
+#             )
+#         start_of_day = datetime.combine(
+#             date_obj, datetime.min.time(), tzinfo=timezone.utc
+#         )
+#         end_of_day = datetime.combine(
+#             date_obj, datetime.max.time(), tzinfo=timezone.utc
+#         )
+#     else:
+#         now = datetime.now(timezone.utc)
+#         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+#         end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+#     filters["start_date"] = {"$gte": start_of_day, "$lte": end_of_day}
+
+#     tasks = await db.tasks.find(filters).to_list(length=100)
+#     enriched_tasks = []
+#     for task in tasks:
+#         task = await update_if_overdue(db, task)
+#         task = await enrich_task_with_names(db, task)
+#         enriched_tasks.append(TaskResponse(**task))
+#     return enriched_tasks
+
+
 async def get_tasks(
     db: AsyncIOMotorDatabase,
     assigned_to: str = None,
@@ -121,10 +192,50 @@ async def get_tasks(
     category: str = None,
     search: str = None,
     date: str = None,
+    user_role: str = None,
 ) -> List[TaskResponse]:
     filters = {}
-    if assigned_to:
-        filters["assigned_to"] = ObjectId(assigned_to)
+    if user_role == "Admin":
+        if assigned_to:
+            if "," in assigned_to:
+                try:
+                    nurse_ids = [
+                        ObjectId(id.strip())
+                        for id in assigned_to.split(",")
+                        if id.strip()
+                    ]
+                    if nurse_ids:
+                        filters["assigned_to"] = {"$in": nurse_ids}
+                except Exception as e:
+                    raise Exception(f"Error processing nurse IDs: {e}")
+            else:
+                try:
+                    filters["assigned_to"] = ObjectId(assigned_to)
+                except Exception as e:
+                    raise Exception(f"Error converting nurse ID to ObjectId: {e}")
+    else:
+        try:
+            groups = await get_user_groups(db, assigned_to)
+
+            group_member_ids = set()
+            for group in groups:
+                for member in group.members:
+                    group_member_ids.add(str(member))
+
+            group_member_ids.add(assigned_to)
+
+            obj_ids = [
+                ObjectId(id) for id in group_member_ids if id and id != "undefined"
+            ]
+            if obj_ids:
+                filters["assigned_to"] = {"$in": obj_ids}
+
+        except Exception as e:
+            try:
+                filters["assigned_to"] = ObjectId(assigned_to)
+            except Exception as e2:
+                raise Exception(f"Error converting user ID to ObjectId: {e2}")
+
     if status:
         filters["status"] = status
     if priority:
