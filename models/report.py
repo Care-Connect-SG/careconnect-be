@@ -10,6 +10,8 @@ from models.user import UserTagResponse
 class ReportStatus(str, Enum):
     DRAFT = "Draft"
     PUBLISHED = "Published"
+    CHANGES_REQUESTED = "Changes Requested"
+    SUBMITTED = "Submitted"
 
 
 class ReportSectionContent(BaseModel):
