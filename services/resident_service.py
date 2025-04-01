@@ -40,6 +40,30 @@ async def create_residentInfo(
     return RegistrationResponse(**new_record)
 
 
+async def get_residents_with_pagination(
+    db, page: int = 1, limit: int = 8, search: Optional[str] = None
+) -> List[RegistrationResponse]:
+    if page < 1:
+        page = 1
+    if limit < 1:
+        limit = 8
+
+    skip = (page - 1) * limit
+
+    query = {}
+
+    if search and search.strip():
+        query["full_name"] = {"$regex": search, "$options": "i"}
+
+    cursor = db["resident_info"].find(query).skip(skip).limit(limit)
+
+    residents = []
+    async for record in cursor:
+        residents.append(RegistrationResponse(**record))
+
+    return residents
+
+
 async def get_all_residents(db) -> List[RegistrationResponse]:
     residents = []
     cursor = db["resident_info"].find()
@@ -48,21 +72,13 @@ async def get_all_residents(db) -> List[RegistrationResponse]:
     return residents
 
 
-async def get_residents_count(db, nurse: Optional[str] = None) -> int:
+async def get_residents_count_with_search(db, search: Optional[str] = None) -> int:
     query = {}
-    if nurse:
-        query["primary_nurse"] = nurse
+    if search and search.strip():
+        query["full_name"] = {"$regex": search, "$options": "i"}
 
     count = await db["resident_info"].count_documents(query)
     return count
-
-
-async def get_residents_by_name(db, name: str) -> List[RegistrationResponse]:
-    residents = []
-    cursor = db["resident_info"].find({"full_name": {"$regex": name, "$options": "i"}})
-    async for record in cursor:
-        residents.append(RegistrationResponse(**record))
-    return residents
 
 
 async def get_resident_by_id(db, resident_id: str) -> RegistrationResponse:
@@ -147,20 +163,6 @@ async def get_resident_tags(search_key: str, limit, db) -> List[ResidentTagRespo
         resident_data = {"id": record["_id"], "name": record["full_name"]}
         residents.append(ResidentTagResponse(**resident_data))
 
-    return residents
-
-
-async def get_all_residents_by_nurse(
-    db, nurse: Optional[str]
-) -> List[RegistrationResponse]:
-    query = {}
-    if nurse:
-        query["primary_nurse"] = nurse
-
-    cursor = db["resident_info"].find(query)
-    residents = []
-    async for record in cursor:
-        residents.append(RegistrationResponse(**record))
     return residents
 
 
