@@ -106,17 +106,17 @@ Provide a task suggestion in this exact JSON format:
 
 Ensure the response is ONLY valid JSON with no extra text."""
 
-        # Call GPT-4 with higher temperature for more variety
+        # Call GPT-4 with balanced temperature for controlled variety
         response = await client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a creative healthcare assistant AI that generates unique and varied care tasks. Avoid repetitive suggestions and ensure each task is specific to the current situation."},
+                {"role": "system", "content": "You are a precise healthcare assistant AI that generates specific and relevant care tasks. Focus on creating clear, actionable tasks while maintaining some variety."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.8,  # Increased temperature for more variety
+            temperature=0.4,  # Reduced temperature for more focused outputs
             max_tokens=500,
-            presence_penalty=0.6,  # Add presence penalty to reduce repetition
-            frequency_penalty=0.6  # Add frequency penalty to encourage unique words
+            presence_penalty=0.3,  # Reduced presence penalty for more consistent outputs
+            frequency_penalty=0.3  # Reduced frequency penalty for more focused language
         )
 
         # Extract and parse the response
