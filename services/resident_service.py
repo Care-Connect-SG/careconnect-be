@@ -48,6 +48,15 @@ async def get_all_residents(db) -> List[RegistrationResponse]:
     return residents
 
 
+async def get_residents_count(db, nurse: Optional[str] = None) -> int:
+    query = {}
+    if nurse:
+        query["primary_nurse"] = nurse
+
+    count = await db["resident_info"].count_documents(query)
+    return count
+
+
 async def get_residents_by_name(db, name: str) -> List[RegistrationResponse]:
     residents = []
     cursor = db["resident_info"].find({"full_name": {"$regex": name, "$options": "i"}})

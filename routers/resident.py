@@ -9,6 +9,7 @@ from services.resident_service import (
     update_resident,
     delete_resident,
     get_all_residents_by_nurse,
+    get_residents_count,
 )
 from services.user_service import require_roles
 from db.connection import get_resident_db
@@ -66,6 +67,16 @@ async def list_residents(
     async for record in cursor:
         residents.append(RegistrationResponse(**record))
     return residents
+
+
+@router.get("/count/numOfResidents", response_model=int)
+@limiter.limit("100/minute")
+async def get_count(
+    request: Request,
+    db=Depends(get_resident_db),
+    nurse: Optional[str] = None,
+):
+    return await get_residents_count(db, nurse)
 
 
 @router.get(
