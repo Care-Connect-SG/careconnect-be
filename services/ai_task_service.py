@@ -105,10 +105,10 @@ Ensure the response is ONLY valid JSON with no extra text."""
                 {"role": "system", "content": "You are a precise healthcare assistant AI that generates specific and relevant care tasks. Focus on creating clear, actionable tasks while maintaining some variety."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.4,  # Reduced temperature for more focused outputs
+            temperature=0.4,
             max_tokens=500,
-            presence_penalty=0.3,  # Reduced presence penalty for more consistent outputs
-            frequency_penalty=0.3  # Reduced frequency penalty for more focused language
+            presence_penalty=0.3,
+            frequency_penalty=0.3
         )
 
         suggestion_text = response.choices[0].message.content.strip()
