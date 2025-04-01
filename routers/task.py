@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter, Request, status
+from fastapi import Depends, APIRouter, Request, status, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
 from models.task import TaskResponse, TaskCreate, TaskUpdate
@@ -23,6 +23,7 @@ from services.user_service import require_roles, get_current_user
 from typing import Optional, List
 from fastapi.responses import StreamingResponse
 import io
+from services.ai_task_service import get_ai_task_suggestion
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -281,3 +282,22 @@ async def handle_task_self_route(
 ):
     updated_task = await handle_task_self(db, task_id, current_user["id"])
     return updated_task
+
+
+@router.get("/ai-suggestion/{resident_id}", response_model=TaskCreate)
+async def get_task_suggestion(
+    resident_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """
+    Get an AI-generated task suggestion for a resident.
+    """
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    suggestion = await get_ai_task_suggestion(db, resident_id, current_user)
+    if not suggestion:
+        raise HTTPException(status_code=500, detail="Failed to generate task suggestion")
+    
+    return suggestion

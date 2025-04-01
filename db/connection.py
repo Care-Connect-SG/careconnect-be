@@ -16,7 +16,9 @@ async def get_resident_db(request: Request):
 async def lifespan(app: FastAPI):
     try:
         app.mongodb_client = AsyncIOMotorClient(
-            MONGO_URI, serverSelectionTimeoutMS=5000
+            MONGO_URI, 
+            serverSelectionTimeoutMS=5000,
+            tlsAllowInvalidCertificates=True
         )
         app.primary_db = app.mongodb_client.get_database("caregiver")
         await app.primary_db.command("ping")
