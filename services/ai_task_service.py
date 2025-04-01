@@ -13,7 +13,6 @@ from models.task import TaskCreate, TaskStatus, TaskPriority, TaskCategory
 from utils.config import OPENAI_API_KEY
 from openai import AsyncOpenAI
 
-# Create a custom HTTPX client with SSL verification disabled
 http_client = httpx.AsyncClient(verify=False)
 client = AsyncOpenAI(
     api_key=OPENAI_API_KEY,
@@ -35,18 +34,15 @@ async def get_ai_task_suggestion(
         Optional[TaskCreate]: A task object with AI-generated suggestions, or None if generation fails
     """
     try:
-        # Get resident information
         resident_db = db.client.get_database("resident")
         resident = await resident_db.residents.find_one({"_id": ObjectId(resident_id)})
         resident_name = f"{resident.get('first_name', '')} {resident.get('last_name', '')}" if resident else "Unknown Resident"
         
-        # Get resident's past tasks (most recent 5 completed tasks)
         past_tasks = await db.tasks.find({
             "resident": ObjectId(resident_id),
             "status": TaskStatus.COMPLETED
         }).sort("created_at", -1).limit(5).to_list(length=5)
         
-        # Format past tasks for context
         tasks_info = "\n".join([
             f"- {task.get('task_title', 'Unknown Task')}: {task.get('task_details', 'No details')} "
             f"(Category: {task.get('category', 'Unknown')}, Priority: {task.get('priority', 'Unknown')})"
@@ -56,7 +52,6 @@ async def get_ai_task_suggestion(
         if not tasks_info:
             tasks_info = "No previous tasks found for this resident."
         
-        # Get medical history if available
         medical_info = "No medical history available."
         medical_records = await resident_db.medical_history.find({
             "resident_id": ObjectId(resident_id)
@@ -68,14 +63,12 @@ async def get_ai_task_suggestion(
                 for record in medical_records
             ])
         
-        # Get available nurses for scheduling
         nurses = await db.users.find({"role": "Nurse"}).to_list(length=None)
         nurse_info = "\n".join([
             f"- {nurse.get('first_name', '')} {nurse.get('last_name', '')}"
             for nurse in nurses
         ])
 
-        # Create the prompt for GPT
         prompt = f"""As a healthcare assistant AI, suggest a unique and specific care task for the resident based on the following information:
 
 Resident: {resident_name}
@@ -106,7 +99,6 @@ Provide a task suggestion in this exact JSON format:
 
 Ensure the response is ONLY valid JSON with no extra text."""
 
-        # Call GPT-4 with balanced temperature for controlled variety
         response = await client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -119,10 +111,8 @@ Ensure the response is ONLY valid JSON with no extra text."""
             frequency_penalty=0.3  # Reduced frequency penalty for more focused language
         )
 
-        # Extract and parse the response
         suggestion_text = response.choices[0].message.content.strip()
         
-        # Clean up response if it contains markdown
         if suggestion_text.startswith("```json"):
             suggestion_text = suggestion_text.replace("```json", "", 1)
             if suggestion_text.endswith("```"):
@@ -132,10 +122,8 @@ Ensure the response is ONLY valid JSON with no extra text."""
             if suggestion_text.endswith("```"):
                 suggestion_text = suggestion_text[:-3].strip()
 
-        # Parse the suggestion
         suggestion = json.loads(suggestion_text)
 
-        # Map the category string to TaskCategory enum
         category_mapping = {
             "MEALS": TaskCategory.MEALS,
             "MEDICATION": TaskCategory.MEDICATION,
@@ -144,7 +132,6 @@ Ensure the response is ONLY valid JSON with no extra text."""
         }
         category = category_mapping.get(suggestion.get("category", "THERAPY"), TaskCategory.THERAPY)
 
-        # Map the priority string to TaskPriority enum
         priority_mapping = {
             "HIGH": TaskPriority.HIGH,
             "MEDIUM": TaskPriority.MEDIUM,
@@ -152,17 +139,14 @@ Ensure the response is ONLY valid JSON with no extra text."""
         }
         priority = priority_mapping.get(suggestion.get("priority", "MEDIUM"), TaskPriority.MEDIUM)
 
-        # Create start and due times
         now = datetime.now(timezone.utc)
         start_time = now + timedelta(hours=1)  # Default start time is 1 hour from now
         due_time = now + timedelta(hours=3)    # Default due time is 3 hours from now
 
-        # If task is urgent, schedule it sooner
         if suggestion.get("is_urgent", False):
             start_time = now + timedelta(minutes=30)
             due_time = now + timedelta(hours=2)
 
-        # Create the task suggestion
         task_suggestion = {
             "task_title": suggestion["task_title"],
             "task_details": f"{suggestion['task_details']}\n\nReasoning: {suggestion['reasoning']}",
