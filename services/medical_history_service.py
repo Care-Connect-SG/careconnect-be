@@ -1,19 +1,14 @@
 import datetime
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from fastapi import HTTPException
-from bson import ObjectId
-from typing import List, Union, Dict, Type
-from models.medical_history import (
-    MedicalHistoryType,
-    ConditionRecord,
-    AllergyRecord,
-    ChronicIllnessRecord,
-    SurgicalHistoryRecord,
-    ImmunizationRecord,
-    BaseMedicalHistory,
-    MedicalHistoryUnion,
-)
+from typing import Dict, List, Type, Union
 
+from bson import ObjectId
+from fastapi import HTTPException
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from models.medical_history import (AllergyRecord, BaseMedicalHistory,
+                                    ChronicIllnessRecord, ConditionRecord,
+                                    ImmunizationRecord, MedicalHistoryType,
+                                    MedicalHistoryUnion, SurgicalHistoryRecord)
 
 RECORD_TYPE_MAP: Dict[
     MedicalHistoryType, Dict[str, Union[str, Type[BaseMedicalHistory]]]

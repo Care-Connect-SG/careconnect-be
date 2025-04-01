@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import HTTPException, Request
+
 from bson import ObjectId
+from fastapi import HTTPException, Request
+
 from db.connection import get_db
-from models.activity import ActivityResponse, ActivityCreate, ActivityUpdate
+from models.activity import ActivityCreate, ActivityResponse, ActivityUpdate
 
 collection_name = "activities"
 

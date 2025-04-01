@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field
-from datetime import datetime, timezone, date
-from typing import Optional, List
+from datetime import date, datetime, timezone
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
 from models.base import ModelConfig, PyObjectId
 
 

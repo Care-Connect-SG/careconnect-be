@@ -1,13 +1,13 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Request
 
-from db.connection import get_resident_db, get_db
+from db.connection import get_db, get_resident_db
 from models.resident import ResidentTagResponse
 from models.user import UserTagResponse
 from services.resident_service import get_resident_tags
 from services.user_service import get_caregiver_tags
 from utils.limiter import limiter
-
 
 router = APIRouter(prefix="/tags", tags=["Resident and Caregiver Tags"])
 

@@ -1,28 +1,22 @@
-from fastapi import Depends, APIRouter, Request, status
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from db.connection import get_db
-from models.task import TaskResponse, TaskCreate, TaskUpdate
-from services.task_service import (
-    create_task,
-    get_tasks,
-    get_task_by_id,
-    update_task,
-    delete_task,
-    reassign_task,
-    complete_task,
-    reopen_task,
-    duplicate_task,
-    download_task,
-    request_task_reassignment,
-    accept_task_reassignment,
-    reject_task_reassignment,
-    handle_task_self,
-)
-from utils.limiter import limiter
-from services.user_service import require_roles, get_current_user
-from typing import Optional, List
-from fastapi.responses import StreamingResponse
 import io
+from datetime import datetime
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from db.connection import get_db
+from models.task import TaskCreate, TaskResponse, TaskUpdate
+from services.task_service import (accept_task_reassignment, complete_task,
+                                   create_task, delete_task, download_task,
+                                   download_tasks, duplicate_task,
+                                   get_task_by_id, get_tasks, handle_task_self,
+                                   reassign_task, reject_task_reassignment,
+                                   reopen_task, request_task_reassignment,
+                                   update_task)
+from services.user_service import get_current_user, require_roles
+from utils.limiter import limiter
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -191,21 +185,43 @@ async def duplicate_task_route(
 
 @router.get(
     "/{task_id}/download",
-    summary="Download a task as text file",
+    summary="Download a task as text or PDF file",
     response_class=StreamingResponse,
 )
 @limiter.limit("10/minute")
 async def download_task_route(
     request: Request,
     task_id: str,
+    format: str = "text",
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    text_content = await download_task(db, task_id)
-    return StreamingResponse(
-        io.BytesIO(text_content),
-        media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename=task-{task_id}.txt"},
-    )
+    """Download a task in either text or PDF format.
+
+    Args:
+        task_id: The ID of the task to download
+        format: The format to download in ('text' or 'pdf')
+    """
+    try:
+        content = await download_task(db, task_id, format)
+
+        if format == "text":
+            media_type = "text/plain"
+            filename = f"task-{task_id}.txt"
+        elif format == "pdf":
+            media_type = "application/pdf"
+            filename = f"task-{task_id}.pdf"
+        else:
+            raise HTTPException(
+                status_code=400, detail="Invalid format. Must be either 'text' or 'pdf'"
+            )
+
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+        return StreamingResponse(
+            iter([content]), media_type=media_type, headers=headers
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading task: {str(e)}")
 
 
 @router.post(
@@ -281,3 +297,27 @@ async def handle_task_self_route(
 ):
     updated_task = await handle_task_self(db, task_id, current_user["id"])
     return updated_task
+
+
+@router.post(
+    "/download",
+    summary="Download multiple tasks as a single PDF file",
+    response_class=StreamingResponse,
+)
+@limiter.limit("10/minute")
+async def download_tasks_route(
+    request: Request,
+    task_ids: List[str],
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    try:
+        content = await download_tasks(db, task_ids)
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=tasks-{datetime.now().strftime('%Y%m%d')}.pdf"
+            },
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

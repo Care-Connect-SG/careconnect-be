@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, Request, status
-from models.medication import MedicationCreate, MedicationResponse
 from typing import List
-from services.medication_service import (
-    create_medication,
-    get_medications_by_resident,
-    get_medication_by_id,
-    update_medication,
-    delete_medication,
-)
+
+from fastapi import APIRouter, Depends, Request, status
+
 from db.connection import get_resident_db
+from models.medication import MedicationCreate, MedicationResponse
+from services.medication_service import (create_medication, delete_medication,
+                                         get_medication_by_id,
+                                         get_medications_by_resident,
+                                         update_medication)
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents/{resident_id}/medications", tags=["Medications"])

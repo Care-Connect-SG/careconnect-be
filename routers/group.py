@@ -1,18 +1,14 @@
+from typing import Dict, List
+
 from fastapi import APIRouter, Depends, Request
+
 from db.connection import get_db
-from typing import List, Dict
 from models.group import GroupCreate, GroupResponse
-from services.group_service import (
-    create_group,
-    add_user_to_group,
-    get_all_groups,
-    update_group,
-    delete_group,
-    remove_user_from_group,
-    search_group,
-    get_user_groups,
-    get_group_by_id,
-)
+from services.group_service import (add_user_to_group, create_group,
+                                    delete_group, get_all_groups,
+                                    get_group_by_id, get_user_groups,
+                                    remove_user_from_group, search_group,
+                                    update_group)
 from services.user_service import require_roles
 from utils.limiter import limiter
 

@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from enum import Enum
-from pydantic import BaseModel, Field
 from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
 from models.base import ModelConfig, PyObjectId
 from models.resident import ResidentTagResponse
 from models.user import UserTagResponse

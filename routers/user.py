@@ -1,29 +1,18 @@
-from fastapi import Depends, APIRouter, status, Request
+from typing import Dict, List, Optional
+
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
-from db.connection import get_db
-from models.user import (
-    UserCreate,
-    UserUpdate,
-    UserResponse,
-    Token,
-    RefreshTokenRequest,
-    UserPasswordUpdate,
-)
+
 from auth.jwttoken import refresh_access_token
-from services.user_service import (
-    get_user_role,
-    register_user,
-    login_user,
-    get_user_by_id,
-    get_all_users,
-    update_user,
-    delete_user,
-    get_current_user,
-    update_user_password_service,
-    require_roles,
-)
+from db.connection import get_db
+from models.user import (RefreshTokenRequest, Token, UserCreate,
+                         UserPasswordUpdate, UserResponse, UserUpdate)
+from services.user_service import (delete_user, get_all_users,
+                                   get_current_user, get_user_by_id,
+                                   get_user_role, login_user, register_user,
+                                   require_roles, update_user,
+                                   update_user_password_service)
 from utils.limiter import limiter
-from typing import List, Optional, Dict
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

@@ -1,6 +1,8 @@
 import datetime
 from typing import List, Optional
+
 from fastapi import HTTPException
+
 from models.fixed_medication import FixedMedication
 
 FIXED_MEDICATIONS_DATA = [
