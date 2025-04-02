@@ -205,12 +205,6 @@ async def download_task_route(
     format: str = "text",
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Download a task in either text or PDF format.
-
-    Args:
-        task_id: The ID of the task to download
-        format: The format to download in ('text' or 'pdf')
-    """
     try:
         content = await download_task(db, task_id, format)
 
