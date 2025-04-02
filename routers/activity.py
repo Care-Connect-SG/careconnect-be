@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, Query, Request, status
-from typing import List, Optional
 from datetime import datetime
-from models.activity import ActivityResponse, ActivityCreate, ActivityUpdate
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, Query, Request, status
+
+from models.activity import ActivityCreate, ActivityResponse, ActivityUpdate
 from services import activity_service
 from services.user_service import get_current_user
 from utils.limiter import limiter

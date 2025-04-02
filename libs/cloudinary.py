@@ -1,5 +1,5 @@
 from cloudinary.uploader import upload
-from fastapi import HTTPException, status, UploadFile
+from fastapi import HTTPException, UploadFile, status
 
 
 async def upload_image(image: UploadFile):

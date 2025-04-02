@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Request
 
 from db.connection import get_db
@@ -11,7 +12,6 @@ from services.report_service import (
     update_report,
 )
 from utils.limiter import limiter
-
 
 router = APIRouter(prefix="/incident/reports", tags=["Incident Management Subsystem"])
 

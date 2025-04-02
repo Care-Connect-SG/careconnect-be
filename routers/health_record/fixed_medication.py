@@ -1,5 +1,7 @@
-from fastapi import APIRouter
 from typing import List
+
+from fastapi import APIRouter
+
 from models.fixed_medication import FixedMedication
 from services.fixed_medication_service import get_all_medications, get_medication_by_id
 

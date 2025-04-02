@@ -1,11 +1,15 @@
 import datetime
 import random
-from fastapi import HTTPException
-from models.resident import RegistrationCreate, ResidentTagResponse
-from bson import ObjectId
 from typing import List, Optional
 
-from models.resident import RegistrationCreate, RegistrationResponse
+from bson import ObjectId
+from fastapi import HTTPException
+
+from models.resident import (
+    RegistrationCreate,
+    RegistrationResponse,
+    ResidentTagResponse,
+)
 
 
 async def create_residentInfo(

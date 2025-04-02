@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends, Request, status
 from typing import List
+
+from fastapi import APIRouter, Depends, Request, status
+
+from db.connection import get_resident_db
 from models.wellness_report import WellnessReportCreate, WellnessReportResponse
 from services.wellness_report_service import (
     create_wellness_report,
+    delete_wellness_report,
     get_reports_by_resident,
     get_wellness_report_by_id,
     update_wellness_report,
-    delete_wellness_report,
 )
-from db.connection import get_resident_db
 from utils.limiter import limiter
 
 router = APIRouter(

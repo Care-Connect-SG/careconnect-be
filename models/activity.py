@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
 from typing import Optional
+
+from pydantic import BaseModel, Field
+
 from models.base import ModelConfig, PyObjectId
 
 

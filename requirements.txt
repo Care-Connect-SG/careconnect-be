@@ -6,6 +6,7 @@ black==24.8.0
 Brotli==1.1.0
 certifi==2025.1.31
 cffi==1.17.1
+chardet==5.2.0
 click==8.1.8
 cloudinary==1.43.0
 colorama==0.4.6
@@ -48,6 +49,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-jose==3.4.0
 python-multipart==0.0.20
+reportlab==4.3.1
 rsa==4.9
 setuptools==75.8.0
 six==1.17.0

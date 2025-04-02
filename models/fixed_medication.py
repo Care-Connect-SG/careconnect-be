@@ -1,6 +1,8 @@
-from pydantic import Field
 from datetime import date
 from typing import Optional
+
+from pydantic import Field
+
 from models.base import ModelConfig, PyObjectId
 
 

@@ -1,13 +1,23 @@
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate
-from bson import ObjectId
-from fastapi import HTTPException, status
-from typing import List
 from datetime import datetime, timedelta, timezone
+from typing import List
+
+from bson import ObjectId
+from dateutil.relativedelta import relativedelta
+from fastapi import HTTPException, status
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from models.task import TaskCreate, TaskResponse, TaskStatus, TaskUpdate
+from services.group_service import get_user_groups
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
-from dateutil.relativedelta import relativedelta
-from services.group_service import get_user_groups
+
+from io import BytesIO
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 async def create_task(
@@ -450,37 +460,178 @@ async def duplicate_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse
     return TaskResponse(**new_task)
 
 
-async def download_task(db: AsyncIOMotorDatabase, task_id: str) -> bytes:
-
+async def download_task(
+    db: AsyncIOMotorDatabase, task_id: str, format: str = "text"
+) -> bytes:
+    """Download a task in either text or PDF format."""
     task = await get_task_by_id(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
     task_dict = task.model_dump()
-    task_dict["created_at"] = task_dict["created_at"].strftime("%Y-%m-%d %H:%M:%S")
-    task_dict["due_date"] = task_dict["due_date"].strftime("%Y-%m-%d %H:%M:%S")
-    finished_at = task_dict.get("finished_at")
-    finished_at_text = (
-        f"\nFinished At: {finished_at.strftime('%Y-%m-%d %H:%M:%S')}"
-        if finished_at
-        else ""
-    )
 
-    text_content = f"""Task Details
-=============
+    task_dict = await enrich_task_with_names(db, task_dict)
+    task_dict = await enrich_task_with_room(db, task_dict)
 
-Title: {task_dict["task_title"]}
-Details: {task_dict["task_details"]}
-Status: {task_dict["status"]}
-Priority: {task_dict["priority"]}
-Category: {task_dict["category"]}
-Assigned To: {task_dict["assigned_to_name"]}
-Resident: {task_dict["resident_name"]} (Room {task_dict["resident_room"]})
-Created At: {task_dict["created_at"]}
-Due Date: {task_dict["due_date"]}{finished_at_text}
-"""
+    if format == "text":
+        content = [
+            f"Task Details",
+            f"============",
+            f"Title: {task_dict['task_title']}",
+            f"Status: {task_dict['status']}",
+            f"Priority: {task_dict['priority']}",
+            f"Category: {task_dict['category']}",
+            f"Details: {task_dict['task_details']}",
+            f"",
+            f"Resident Information",
+            f"===================",
+            f"Name: {task_dict.get('resident_name', 'N/A')}",
+            f"Room: {task_dict.get('resident_room', 'N/A')}",
+            f"",
+            f"Assignment Information",
+            f"=====================",
+            f"Assigned To: {task_dict.get('assigned_to_name', 'N/A')}",
+            f"Start Date: {task_dict['start_date'].strftime('%Y-%m-%d %H:%M')}",
+            f"Due Date: {task_dict['due_date'].strftime('%Y-%m-%d %H:%M') if task_dict.get('due_date') else 'N/A'}",
+            f"",
+            f"Additional Information",
+            f"=====================",
+            f"Created At: {task_dict['created_at'].strftime('%Y-%m-%d %H:%M')}",
+            f"Last Updated: {task_dict.get('updated_at', 'N/A')}",
+            f"Recurring: {task_dict.get('recurring', 'No')}",
+            f"Series ID: {task_dict.get('series_id', 'N/A')}",
+        ]
+        return "\n".join(content).encode()
+    elif format == "pdf":
 
-    return text_content.encode("utf-8")
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=72,
+        )
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            "CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30
+        )
+
+        cell_style = ParagraphStyle(
+            "CellStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            leading=14,
+            wordWrap="CJK",
+            splitLongWords=True,
+        )
+
+        header_style = ParagraphStyle(
+            "HeaderStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            leading=14,
+            textColor=colors.white,
+            wordWrap="CJK",
+        )
+
+        story = []
+
+        story.append(Paragraph(f"Task Details: {task_dict['task_title']}", title_style))
+        story.append(Spacer(1, 12))
+
+        data = [
+            [
+                Paragraph("Status:", header_style),
+                Paragraph(task_dict["status"], cell_style),
+            ],
+            [
+                Paragraph("Priority:", header_style),
+                Paragraph(task_dict["priority"], cell_style),
+            ],
+            [
+                Paragraph("Category:", header_style),
+                Paragraph(task_dict["category"], cell_style),
+            ],
+            [
+                Paragraph("Details:", header_style),
+                Paragraph(task_dict["task_details"], cell_style),
+            ],
+            [
+                Paragraph("Resident:", header_style),
+                Paragraph(task_dict.get("resident_name", "N/A"), cell_style),
+            ],
+            [
+                Paragraph("Room:", header_style),
+                Paragraph(task_dict.get("resident_room", "N/A"), cell_style),
+            ],
+            [
+                Paragraph("Assigned To:", header_style),
+                Paragraph(task_dict.get("assigned_to_name", "N/A"), cell_style),
+            ],
+            [
+                Paragraph("Start Date:", header_style),
+                Paragraph(
+                    task_dict["start_date"].strftime("%Y-%m-%d %H:%M"), cell_style
+                ),
+            ],
+            [
+                Paragraph("Due Date:", header_style),
+                Paragraph(
+                    (
+                        task_dict["due_date"].strftime("%Y-%m-%d %H:%M")
+                        if task_dict.get("due_date")
+                        else "N/A"
+                    ),
+                    cell_style,
+                ),
+            ],
+            [
+                Paragraph("Created At:", header_style),
+                Paragraph(
+                    task_dict["created_at"].strftime("%Y-%m-%d %H:%M"), cell_style
+                ),
+            ],
+            [
+                Paragraph("Last Updated:", header_style),
+                Paragraph(str(task_dict.get("updated_at", "N/A")), cell_style),
+            ],
+            [
+                Paragraph("Recurring:", header_style),
+                Paragraph(str(task_dict.get("recurring", "No")), cell_style),
+            ],
+            [
+                Paragraph("Series ID:", header_style),
+                Paragraph(str(task_dict.get("series_id", "N/A")), cell_style),
+            ],
+        ]
+
+        table = Table(data, colWidths=[2 * inch, 4 * inch])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (0, -1), colors.blue),
+                    ("TEXTCOLOR", (0, 0), (0, -1), colors.white),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 12),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ]
+            )
+        )
+
+        story.append(table)
+        doc.build(story)
+
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        return pdf_bytes
+    else:
+        raise ValueError("Invalid format. Must be either 'text' or 'pdf'")
 
 
 async def request_task_reassignment(
@@ -664,3 +815,176 @@ async def update_task_status(db: AsyncIOMotorDatabase, task: dict) -> dict:
         task["status"] = status_update
 
     return task
+
+
+async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes:
+    """Download multiple tasks in a single PDF."""
+    from io import BytesIO
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30
+    )
+
+    subtitle_style = ParagraphStyle(
+        "CustomSubtitle", parent=styles["Heading2"], fontSize=14, spaceAfter=20
+    )
+
+    cell_style = ParagraphStyle(
+        "CellStyle",
+        parent=styles["Normal"],
+        fontSize=10,
+        leading=14,
+        wordWrap="CJK",
+        splitLongWords=True,
+    )
+
+    header_style = ParagraphStyle(
+        "HeaderStyle",
+        parent=styles["Normal"],
+        fontSize=10,
+        leading=14,
+        textColor=colors.white,
+        wordWrap="CJK",
+    )
+
+    story = []
+
+    story.append(Paragraph("Tasks Report", title_style))
+    story.append(Spacer(1, 12))
+
+    for task_id in task_ids:
+        try:
+            task = await get_task_by_id(db, task_id)
+            task_dict = task.model_dump()
+
+            task_dict = await enrich_task_with_names(db, task_dict)
+            task_dict = await enrich_task_with_room(db, task_dict)
+
+            story.append(Paragraph(f"Task: {task_dict['task_title']}", subtitle_style))
+            story.append(Spacer(1, 12))
+
+            data = [
+                [
+                    Paragraph("Status:", header_style),
+                    Paragraph(task_dict["status"], cell_style),
+                ],
+                [
+                    Paragraph("Priority:", header_style),
+                    Paragraph(task_dict["priority"], cell_style),
+                ],
+                [
+                    Paragraph("Category:", header_style),
+                    Paragraph(task_dict["category"], cell_style),
+                ],
+                [
+                    Paragraph("Details:", header_style),
+                    Paragraph(task_dict["task_details"], cell_style),
+                ],
+                [
+                    Paragraph("Resident:", header_style),
+                    Paragraph(task_dict.get("resident_name", "N/A"), cell_style),
+                ],
+                [
+                    Paragraph("Room:", header_style),
+                    Paragraph(task_dict.get("resident_room", "N/A"), cell_style),
+                ],
+                [
+                    Paragraph("Assigned To:", header_style),
+                    Paragraph(task_dict.get("assigned_to_name", "N/A"), cell_style),
+                ],
+                [
+                    Paragraph("Start Date:", header_style),
+                    Paragraph(
+                        task_dict["start_date"].strftime("%Y-%m-%d %H:%M"), cell_style
+                    ),
+                ],
+                [
+                    Paragraph("Due Date:", header_style),
+                    Paragraph(
+                        (
+                            task_dict["due_date"].strftime("%Y-%m-%d %H:%M")
+                            if task_dict.get("due_date")
+                            else "N/A"
+                        ),
+                        cell_style,
+                    ),
+                ],
+                [
+                    Paragraph("Created At:", header_style),
+                    Paragraph(
+                        task_dict["created_at"].strftime("%Y-%m-%d %H:%M"), cell_style
+                    ),
+                ],
+                [
+                    Paragraph("Last Updated:", header_style),
+                    Paragraph(str(task_dict.get("updated_at", "N/A")), cell_style),
+                ],
+                [
+                    Paragraph("Recurring:", header_style),
+                    Paragraph(str(task_dict.get("recurring", "No")), cell_style),
+                ],
+                [
+                    Paragraph("Series ID:", header_style),
+                    Paragraph(str(task_dict.get("series_id", "N/A")), cell_style),
+                ],
+            ]
+
+            table = Table(data, colWidths=[2 * inch, 4 * inch])
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (0, -1), colors.blue),
+                        ("TEXTCOLOR", (0, 0), (0, -1), colors.white),
+                        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                        ("TOPPADDING", (0, 0), (-1, -1), 12),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                        (
+                            "VALIGN",
+                            (0, 0),
+                            (-1, -1),
+                            "TOP",
+                        ),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ]
+                )
+            )
+
+            story.append(table)
+            story.append(PageBreak())
+
+        except Exception as e:
+            print(f"Error processing task {task_id}: {e}")
+            continue
+
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes

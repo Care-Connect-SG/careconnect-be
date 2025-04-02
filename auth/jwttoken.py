@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
-from utils.config import SECRET_KEY
+
 from fastapi import HTTPException
+from jose import JWTError, jwt
+
+from utils.config import SECRET_KEY
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

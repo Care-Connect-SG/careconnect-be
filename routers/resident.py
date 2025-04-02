@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Depends, Request, Query
+from typing import Dict, List, Optional
+
+from fastapi import APIRouter, Depends, Query, Request
+
+from db.connection import get_resident_db
 from models.resident import RegistrationCreate, RegistrationResponse
-from typing import List, Optional, Dict
 from services.resident_service import (
     create_residentInfo,
-    get_all_residents,
-    get_residents_with_pagination,
-    get_residents_count_with_search,
-    get_resident_by_id,
-    update_resident,
     delete_resident,
+    get_all_residents,
+    get_resident_by_id,
+    get_residents_count_with_search,
+    get_residents_with_pagination,
+    update_resident,
 )
 from services.user_service import require_roles
-from db.connection import get_resident_db
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents", tags=["Resident Records"])
