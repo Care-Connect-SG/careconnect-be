@@ -3,13 +3,13 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from db.connection import get_db
 from models.task import TaskCreate, TaskResponse, TaskUpdate
+from services.ai.ai_task_service import get_ai_task_suggestion
 from services.task_service import (
     accept_task_reassignment,
     complete_task,
     create_task,
     delete_task,
     download_task,
-    download_tasks,
     duplicate_task,
     get_task_by_id,
     get_tasks,
@@ -292,3 +292,18 @@ async def handle_task_self_route(
 ):
     updated_task = await handle_task_self(db, task_id, current_user["id"])
     return updated_task
+
+
+@router.get(
+    "/ai-suggestion/{resident_id}",
+    response_model=TaskCreate,
+    response_model_by_alias=False,
+)
+async def get_task_suggestion(
+    resident_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    suggestion = await get_ai_task_suggestion(db, resident_id, current_user)
+
+    return suggestion

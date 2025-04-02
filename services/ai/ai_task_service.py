@@ -9,6 +9,7 @@ from bson import ObjectId
 from typing import Optional
 import httpx
 
+from fastapi import HTTPException
 from models.task import TaskCreate, TaskStatus, TaskPriority, TaskCategory
 from utils.config import OPENAI_API_KEY
 from openai import AsyncOpenAI
@@ -187,5 +188,6 @@ Ensure the response is ONLY valid JSON with no extra text."""
         return task_suggestion
 
     except Exception as e:
-        print(f"Error generating AI task suggestion: {str(e)}")
-        return None
+        raise HTTPException(
+            status_code=500, detail=f"Error generating AI task suggestion: {str(e)}"
+        )
