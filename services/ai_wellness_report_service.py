@@ -1,8 +1,3 @@
-"""
-AI-driven wellness report generation service for CareConnect.
-This module uses LangChain and OpenAI to generate comprehensive wellness reports based on resident data.
-"""
-
 import json
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
