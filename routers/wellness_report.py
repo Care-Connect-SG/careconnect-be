@@ -94,10 +94,6 @@ async def get_ai_suggestion(
     current_user: dict = Depends(get_current_user),
     user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
-    """
-    Generate an AI-powered wellness report suggestion for a resident based on their medical history and past reports.
-    This endpoint only generates the suggestion without creating a report in the database.
-    """
     try:
         # Get AI-generated suggestion
         ai_suggestion = await get_ai_wellness_report_suggestion(db, resident_id, current_user)

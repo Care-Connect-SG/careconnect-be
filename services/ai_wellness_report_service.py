@@ -29,6 +29,7 @@ async def get_ai_wellness_report_suggestion(
     try:
         # Get resident information
         resident_db = db.client.get_database("resident")
+        print(f"Looking for resident with ID: {resident_id}")  # Debug log
         resident = await resident_db.resident_info.find_one({"_id": ObjectId(resident_id)})
         if not resident:
             print(f"Resident not found with ID: {resident_id}")
@@ -38,6 +39,7 @@ async def get_ai_wellness_report_suggestion(
         print(f"Generating report for resident: {resident_name}")
         
         # Get medical history
+        print("Fetching medical history...")  # Debug log
         medical_records = await resident_db.medical_history.find({
             "resident_id": ObjectId(resident_id)
         }).sort("created_at", -1).limit(5).to_list(length=5)
@@ -50,6 +52,7 @@ async def get_ai_wellness_report_suggestion(
         ]) if medical_records else "No medical history available."
         
         # Get vital signs if available
+        print("Fetching vital signs...")  # Debug log
         vital_signs = await resident_db.vital_signs.find({
             "resident_id": ObjectId(resident_id)
         }).sort("created_at", -1).limit(5).to_list(length=5)
@@ -65,6 +68,7 @@ async def get_ai_wellness_report_suggestion(
         ]) if vital_signs else "No vital signs data available."
 
         # Get past wellness reports (most recent 3)
+        print("Fetching past wellness reports...")  # Debug log
         past_reports = await resident_db.wellness_reports.find({
             "resident_id": ObjectId(resident_id)
         }).sort("created_at", -1).limit(3).to_list(length=3)
@@ -80,7 +84,7 @@ async def get_ai_wellness_report_suggestion(
             f"Mobility: {report.get('mobility_physical', 'No mobility info')}\n"
             f"Cognitive & Emotional: {report.get('cognitive_emotional', 'No cognitive info')}\n"
             f"Social Engagement: {report.get('social_engagement', 'No social info')}\n"
-            f"Recommendations: {', '.join(report.get('ai_recommendations', []))}\n"
+            f"Recommendations: {', '.join(report.get('ai_recommendations', []) if isinstance(report.get('ai_recommendations'), list) else [])}\n"
             for report in past_reports
         ]) if past_reports else "No previous wellness reports available."
         
@@ -149,16 +153,22 @@ async def get_ai_wellness_report_suggestion(
             print("Invoking LLM chain...")
             # Run the chain in a separate thread
             loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: chain.invoke({
-                    "resident_name": resident_name,
-                    "medical_info": medical_info,
-                    "vital_signs_info": vital_signs_info,
-                    "past_reports_info": past_reports_info,
-                    "current_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-                })
-            )
+            try:
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: chain.invoke({
+                        "resident_name": resident_name,
+                        "medical_info": medical_info,
+                        "vital_signs_info": vital_signs_info,
+                        "past_reports_info": past_reports_info,
+                        "current_time": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                )
+                print("LLM chain executed successfully")
+            except Exception as e:
+                print(f"Error during LLM chain execution: {str(e)}")
+                print(f"Full traceback: {traceback.format_exc()}")
+                raise
             
             print("Received response from LLM")
             # Extract and clean up the response
@@ -177,42 +187,52 @@ async def get_ai_wellness_report_suggestion(
             
             print(f"Cleaned response: {report_text}")
             
-            # Parse the JSON response
-            suggestion = json.loads(report_text)
-            print(f"Parsed JSON: {json.dumps(suggestion, indent=2)}")
+            try:
+                # Parse the JSON response
+                suggestion = json.loads(report_text)
+                print(f"Successfully parsed JSON: {json.dumps(suggestion, indent=2)}")
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse JSON: {str(e)}")
+                print(f"Response that failed to parse: {report_text}")
+                raise
             
             # Validate that we got necessary fields
             if not suggestion.get("monthly_summary") or not suggestion.get("medical_summary"):
                 print("Missing required fields in AI response")
+                print(f"Available fields: {list(suggestion.keys())}")
                 raise KeyError("Response missing required fields")
             
-            # Create wellness report suggestion
-            report_create = WellnessReportCreate(
-                date=datetime.strptime(suggestion.get("date"), "%Y-%m-%d").date(),
-                monthly_summary=suggestion.get("monthly_summary"),
-                medical_summary=suggestion.get("medical_summary"),
-                medication_update=suggestion.get("medication_update"),
-                nutrition_hydration=suggestion.get("nutrition_hydration"),
-                mobility_physical=suggestion.get("mobility_physical"),
-                cognitive_emotional=suggestion.get("cognitive_emotional"),
-                social_engagement=suggestion.get("social_engagement"),
-                is_ai_generated=True,
-                ai_confidence_score=suggestion.get("confidence_score", 0.5),
-                ai_recommendations=suggestion.get("recommendations", [])
-            )
-            
-            print("Successfully created wellness report")
-            return report_create
+            try:
+                # Create wellness report suggestion
+                report_create = WellnessReportCreate(
+                    date=datetime.strptime(suggestion.get("date"), "%Y-%m-%d").date(),
+                    monthly_summary=suggestion.get("monthly_summary"),
+                    medical_summary=suggestion.get("medical_summary"),
+                    medication_update=suggestion.get("medication_update"),
+                    nutrition_hydration=suggestion.get("nutrition_hydration"),
+                    mobility_physical=suggestion.get("mobility_physical"),
+                    cognitive_emotional=suggestion.get("cognitive_emotional"),
+                    social_engagement=suggestion.get("social_engagement"),
+                    is_ai_generated=True,
+                    ai_confidence_score=suggestion.get("confidence_score", 0.5),
+                    ai_recommendations=suggestion.get("recommendations", [])
+                )
+                print("Successfully created wellness report")
+                return report_create
+            except Exception as e:
+                print(f"Error creating WellnessReportCreate: {str(e)}")
+                print(f"Full traceback: {traceback.format_exc()}")
+                raise
             
         except (json.JSONDecodeError, KeyError) as e:
             print(f"Error parsing AI response: {e}")
             print(f"Response was: {response['text'] if 'text' in response else 'No text in response'}")
-            print(traceback.format_exc())
+            print(f"Full traceback: {traceback.format_exc()}")
             raise  # Re-raise the exception to be caught by the outer try-except
     
     except Exception as e:
         print(f"Error generating wellness report: {e}")
-        print(traceback.format_exc())
+        print(f"Full traceback: {traceback.format_exc()}")
         
         # Return a basic fallback report
         now = datetime.now(timezone.utc)
@@ -230,4 +250,4 @@ async def get_ai_wellness_report_suggestion(
             ai_recommendations=["Review available data for more accurate assessment"]
         )
         
-        return fallback_report 
+        return fallback_report
