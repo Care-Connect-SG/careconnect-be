@@ -165,8 +165,8 @@ Ensure the response is ONLY valid JSON with no extra text."""
         )
 
         now = datetime.now(timezone.utc)
-        start_time = now + timedelta(hours=1)  # Default start time is 1 hour from now
-        due_time = now + timedelta(hours=3)  # Default due time is 3 hours from now
+        start_time = now + timedelta(hours=1)
+        due_time = now + timedelta(hours=3)
 
         if suggestion.get("is_urgent", False):
             start_time = now + timedelta(minutes=30)

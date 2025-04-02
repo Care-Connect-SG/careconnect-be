@@ -11,6 +11,14 @@ from services.group_service import get_user_groups
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
 
+from io import BytesIO
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
 
 async def create_task(
     db, task_data: TaskCreate, current_user: dict, single_mode: bool = False
@@ -459,7 +467,6 @@ async def download_task(
     task = await get_task_by_id(db, task_id)
     task_dict = task.model_dump()
 
-    # Enrich task with names and room information
     task_dict = await enrich_task_with_names(db, task_dict)
     task_dict = await enrich_task_with_room(db, task_dict)
 
@@ -493,14 +500,6 @@ async def download_task(
         ]
         return "\n".join(content).encode()
     elif format == "pdf":
-        from io import BytesIO
-
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-        from reportlab.lib.units import inch
-        from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer,
-                                        Table, TableStyle)
 
         buffer = BytesIO()
         doc = SimpleDocTemplate(
@@ -513,7 +512,6 @@ async def download_task(
         )
         styles = getSampleStyleSheet()
 
-        # Create custom styles for the content
         title_style = ParagraphStyle(
             "CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30
         )
@@ -522,8 +520,8 @@ async def download_task(
             "CellStyle",
             parent=styles["Normal"],
             fontSize=10,
-            leading=14,  # Line height
-            wordWrap="CJK",  # Enable word wrapping
+            leading=14,
+            wordWrap="CJK",
             splitLongWords=True,
         )
 
@@ -538,11 +536,9 @@ async def download_task(
 
         story = []
 
-        # Title
         story.append(Paragraph(f"Task Details: {task_dict['task_title']}", title_style))
         story.append(Spacer(1, 12))
 
-        # Convert data to paragraphs for proper wrapping
         data = [
             [
                 Paragraph("Status:", header_style),
@@ -609,7 +605,6 @@ async def download_task(
             ],
         ]
 
-        # Create table with auto-width columns
         table = Table(data, colWidths=[2 * inch, 4 * inch])
         table.setStyle(
             TableStyle(
@@ -622,9 +617,9 @@ async def download_task(
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
                     ("TOPPADDING", (0, 0), (-1, -1), 12),
                     ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),  # Align text to top of cells
-                    ("LEFTPADDING", (0, 0), (-1, -1), 6),  # Add left padding
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),  # Add right padding
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                 ]
             )
         )
@@ -830,8 +825,14 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
     from reportlab.lib.pagesizes import letter
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import inch
-    from reportlab.platypus import (PageBreak, Paragraph, SimpleDocTemplate,
-                                    Spacer, Table, TableStyle)
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -844,7 +845,6 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
     )
     styles = getSampleStyleSheet()
 
-    # Create custom styles for the content
     title_style = ParagraphStyle(
         "CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30
     )
@@ -857,8 +857,8 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
         "CellStyle",
         parent=styles["Normal"],
         fontSize=10,
-        leading=14,  # Line height
-        wordWrap="CJK",  # Enable word wrapping
+        leading=14,
+        wordWrap="CJK",
         splitLongWords=True,
     )
 
@@ -873,7 +873,6 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
 
     story = []
 
-    # Title
     story.append(Paragraph("Tasks Report", title_style))
     story.append(Spacer(1, 12))
 
@@ -882,15 +881,12 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
             task = await get_task_by_id(db, task_id)
             task_dict = task.model_dump()
 
-            # Enrich task with names and room information
             task_dict = await enrich_task_with_names(db, task_dict)
             task_dict = await enrich_task_with_room(db, task_dict)
 
-            # Task Title
             story.append(Paragraph(f"Task: {task_dict['task_title']}", subtitle_style))
             story.append(Spacer(1, 12))
 
-            # Convert data to paragraphs for proper wrapping
             data = [
                 [
                     Paragraph("Status:", header_style),
@@ -957,7 +953,6 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
                 ],
             ]
 
-            # Create table with auto-width columns
             table = Table(data, colWidths=[2 * inch, 4 * inch])
             table.setStyle(
                 TableStyle(
@@ -975,9 +970,9 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
                             (0, 0),
                             (-1, -1),
                             "TOP",
-                        ),  # Align text to top of cells
-                        ("LEFTPADDING", (0, 0), (-1, -1), 6),  # Add left padding
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),  # Add right padding
+                        ),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                     ]
                 )
             )

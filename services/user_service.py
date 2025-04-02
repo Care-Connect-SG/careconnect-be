@@ -6,10 +6,8 @@ from fastapi.security import OAuth2PasswordBearer
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from auth.hashing import Hash
-from auth.jwttoken import (create_access_token, create_refresh_token,
-                           verify_token)
-from models.user import (UserCreate, UserPasswordUpdate, UserResponse,
-                         UserTagResponse)
+from auth.jwttoken import create_access_token, create_refresh_token, verify_token
+from models.user import UserCreate, UserPasswordUpdate, UserResponse, UserTagResponse
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 

@@ -5,10 +5,16 @@ from bson import ObjectId
 from fastapi import HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from models.medical_history import (AllergyRecord, BaseMedicalHistory,
-                                    ChronicIllnessRecord, ConditionRecord,
-                                    ImmunizationRecord, MedicalHistoryType,
-                                    MedicalHistoryUnion, SurgicalHistoryRecord)
+from models.medical_history import (
+    AllergyRecord,
+    BaseMedicalHistory,
+    ChronicIllnessRecord,
+    ConditionRecord,
+    ImmunizationRecord,
+    MedicalHistoryType,
+    MedicalHistoryUnion,
+    SurgicalHistoryRecord,
+)
 
 RECORD_TYPE_MAP: Dict[
     MedicalHistoryType, Dict[str, Union[str, Type[BaseMedicalHistory]]]
