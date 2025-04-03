@@ -3,12 +3,20 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Request
 
 from db.connection import get_db
-from models.report import ReportCreate, ReportResponse
+from models.report import (
+    ReportCreate,
+    ReportResponse,
+    ReportReviewCreate,
+    ResolveReportRequest,
+)
 from services.report_service import (
+    add_report_review,
+    approve_report,
     create_report,
     get_report_by_id,
     get_reports,
     remove_report,
+    resolve_report_review,
     update_report,
 )
 from utils.limiter import limiter
@@ -58,3 +66,33 @@ async def edit_report(
 @limiter.limit("10/minute")
 async def delete_report(request: Request, report_id: str, db=Depends(get_db)):
     return await remove_report(report_id, db)
+
+
+@router.put("/{report_id}/publish", summary="Publish a report", response_model=str)
+@limiter.limit("10/minute")
+async def publish_report(request: Request, report_id: str, db=Depends(get_db)):
+    return await approve_report(report_id, db)
+
+
+@router.put("/{report_id}/review", summary="Add a report review", response_model=str)
+@limiter.limit("10/minute")
+async def review_report(
+    request: Request,
+    report_id: str,
+    review_data: ReportReviewCreate,
+    db=Depends(get_db),
+):
+    return await add_report_review(report_id, review_data, db)
+
+
+@router.put(
+    "/{report_id}/resolve", summary="Resolve a report review", response_model=str
+)
+@limiter.limit("10/minute")
+async def resolve_report(
+    request: Request,
+    report_id: str,
+    resolution: ResolveReportRequest,
+    db=Depends(get_db),
+):
+    return await resolve_report_review(report_id, resolution.resolution, db)
