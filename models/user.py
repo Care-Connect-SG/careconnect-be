@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from enum import Enum
-from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field
+
 from models.base import ModelConfig, PyObjectId
 
 
@@ -51,8 +53,8 @@ class UserResponse(ModelConfig):
     gender: Gender
 
 
-class UserTagResponse(BaseModel):
-    id: str
+class UserTagResponse(ModelConfig):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str
     role: str
 

@@ -1,11 +1,13 @@
-from fastapi import HTTPException, status, Depends
+from typing import Dict, List, Optional
+
+from bson import ObjectId
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from auth.hashing import Hash
 from auth.jwttoken import create_access_token, create_refresh_token, verify_token
-from bson import ObjectId
-from models.user import UserTagResponse, UserResponse, UserCreate, UserPasswordUpdate
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from fastapi.security import OAuth2PasswordBearer
-from typing import List, Dict, Optional
+from models.user import UserCreate, UserPasswordUpdate, UserResponse, UserTagResponse
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
@@ -50,7 +52,6 @@ def get_user_role(token: str = Depends(oauth2_scheme)):
     return user_data.get("role")
 
 
-# Register User
 async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserResponse:
     existing_user = await db["users"].find_one({"email": user.email})
     if existing_user:
@@ -67,7 +68,6 @@ async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserRespo
     return UserResponse(**user_dict)
 
 
-# Login User (Authenticate)
 async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> dict:
     user = await db["users"].find_one({"email": username})
     if not user or not Hash.verify(user["password"], password):
@@ -92,7 +92,6 @@ async def login_user(db: AsyncIOMotorDatabase, username: str, password: str) -> 
     }
 
 
-# Get User by ID (Read)
 async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse:
     try:
         user_object_id = ObjectId(user_id)
@@ -106,7 +105,6 @@ async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> UserResponse
     return UserResponse(**user)
 
 
-# Get User by Email
 async def get_user_by_email_service(
     db: AsyncIOMotorDatabase, email: str
 ) -> Optional[UserResponse]:
@@ -116,7 +114,6 @@ async def get_user_by_email_service(
     return None
 
 
-# Update User (Update)
 async def update_user(
     db: AsyncIOMotorDatabase, user_id: str, user_data: dict
 ) -> UserResponse:
@@ -132,7 +129,6 @@ async def update_user(
     return UserResponse(**updated_user)
 
 
-# Update User Password
 async def update_user_password_service(
     db, user_id: str, password_data: UserPasswordUpdate
 ) -> UserResponse:
@@ -158,7 +154,6 @@ async def update_user_password_service(
     try:
         new_hashed_password = Hash.bcrypt(password_data.new_password)
     except Exception as e:
-        print("Error hashing new password:", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error hashing new password",
@@ -178,7 +173,6 @@ async def update_user_password_service(
     return UserResponse(**updated_user)
 
 
-# Delete User (Delete)
 async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     user = await db["users"].find_one({"_id": ObjectId(user_id)})
     if not user:
@@ -188,7 +182,6 @@ async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> dict:
     return {"res": f"User with ID {user_id} deleted successfully"}
 
 
-# Get All Users (with optional filters)
 async def get_all_users(
     db: AsyncIOMotorDatabase,
     name=None,
@@ -213,7 +206,6 @@ async def get_all_users(
     return users
 
 
-# Search for caregiver by name - for use in report tagging
 async def get_caregiver_tags(search_key: str, limit: int, db) -> List[UserTagResponse]:
     if search_key:
         cursor = (
@@ -229,13 +221,11 @@ async def get_caregiver_tags(search_key: str, limit: int, db) -> List[UserTagRes
 
     caregivers = []
     async for record in cursor:
-        record["id"] = str(record["_id"])
-        del record["_id"]
-        caregivers.append(record)
+        caregivers.append(UserTagResponse(**record))
+
     return caregivers
 
 
-# Get Assigned To Name
 async def get_assigned_to_name(db, assigned_to_id: str) -> str:
     user = await db.users.find_one({"_id": ObjectId(assigned_to_id)}, {"name": 1})
     return user["name"] if user and "name" in user else "Unknown"

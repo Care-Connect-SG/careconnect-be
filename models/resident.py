@@ -1,7 +1,9 @@
-from pydantic import BaseModel, Field
 from datetime import date, datetime
 from typing import Optional
-from models.base import PyObjectId, ModelConfig
+
+from pydantic import BaseModel, Field
+
+from models.base import ModelConfig, PyObjectId
 
 
 class RegistrationCreate(BaseModel):
@@ -37,5 +39,5 @@ class RegistrationResponse(ModelConfig):
 
 
 class ResidentTagResponse(ModelConfig):
-    id: Optional[PyObjectId] = Field(alias="_id")
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str

@@ -8,14 +8,14 @@ from routers.activity import router as activity_router
 from routers.cloudinary.image import router as image_router
 from routers.group import router as group_router
 from routers.health_record.careplan import router as careplan_router
+from routers.health_record.fixed_medication import router as fixed_medication_router
 from routers.health_record.medical_history import router as medical_history_router
 from routers.health_record.medication import router as medication_router
+from routers.health_record.wellness_report import router as wellness_report_router
 from routers.incident.form import router as form_router
 from routers.incident.report import router as report_router
 from routers.resident import router as resident_router
 from routers.tag import router as tag_router
-from routers.fixed_medication import router as fixed_medication_router
-from routers.wellness_report import router as wellness_report_router
 from routers.task import router as task_router
 from routers.user import router as user_router
 from utils.config import FE_URL

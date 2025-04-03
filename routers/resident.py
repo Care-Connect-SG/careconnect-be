@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Depends, Request, Query
+from typing import Dict, List, Optional
+
+from fastapi import APIRouter, Depends, Query, Request
+
+from db.connection import get_resident_db
 from models.resident import RegistrationCreate, RegistrationResponse
-from typing import List, Optional, Dict
 from services.resident_service import (
     create_residentInfo,
-    get_all_residents,
-    get_residents_by_name,
-    get_resident_by_id,
-    update_resident,
     delete_resident,
-    get_all_residents_by_nurse,
+    get_all_residents,
+    get_resident_by_id,
+    get_residents_count_with_search,
+    get_residents_with_pagination,
+    update_resident,
 )
 from services.user_service import require_roles
-from db.connection import get_db
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents", tags=["Resident Records"])
@@ -20,7 +22,7 @@ router = APIRouter(prefix="/residents", tags=["Resident Records"])
 @router.post("/createNewRecord")
 @limiter.limit("10/minute")
 async def create_resident_record(
-    request: Request, registration: RegistrationCreate, db=Depends(get_db)
+    request: Request, registration: RegistrationCreate, db=Depends(get_resident_db)
 ):
     return await create_residentInfo(db, registration)
 
@@ -31,61 +33,46 @@ async def create_resident_record(
     response_model_by_alias=False,
 )
 @limiter.limit("100/minute")
-async def list_residents(
+async def list_all_residents(
     request: Request,
-    db=Depends(get_db),
-    nurse: Optional[str] = None,  # e.g. /residents?nurse=Alice
+    db=Depends(get_resident_db),
 ):
-    if nurse:
-        return await get_all_residents_by_nurse(db, nurse)
-    else:
-        return await get_all_residents(db)
+    return await get_all_residents(db)
 
 
 @router.get(
-    "/", response_model=List[RegistrationResponse], response_model_by_alias=False
+    "/",
+    response_model=List[RegistrationResponse],
+    response_model_by_alias=False,
 )
 @limiter.limit("100/minute")
-async def list_residents(
+async def list_residents_with_pagination(
     request: Request,
-    db=Depends(get_db),
-    nurse: Optional[str] = None,
-    page: Optional[int] = 1,  # default to page 1 if not provided
+    db=Depends(get_resident_db),
+    page: Optional[int] = 1,
+    limit: Optional[int] = 8,
+    search: Optional[str] = None,
 ):
-    limit = 8
-    if page < 1:
-        page = 1
-    skip = (page - 1) * limit
-
-    query = {}
-    if nurse:
-        query["primary_nurse"] = nurse
-
-    cursor = db["resident_info"].find(query).skip(skip).limit(limit)
-    residents = []
-    async for record in cursor:
-        record["_id"] = str(record["_id"])
-        residents.append(RegistrationResponse.parse_obj(record))
-    return residents
+    return await get_residents_with_pagination(db, page, limit, search)
 
 
-@router.get(
-    "/search", response_model=List[RegistrationResponse], response_model_by_alias=False
-)
+@router.get("/count/numOfResidents", response_model=int)
 @limiter.limit("100/minute")
-async def search_residents(
+async def get_count(
     request: Request,
-    name: str = Query(..., description="Substring to search in resident names"),
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
+    search: Optional[str] = None,
 ):
-    return await get_residents_by_name(db, name)
+    return await get_residents_count_with_search(db, search)
 
 
 @router.get(
     "/{resident_id}", response_model=RegistrationResponse, response_model_by_alias=False
 )
 @limiter.limit("100/minute")
-async def view_resident_by_id(request: Request, resident_id: str, db=Depends(get_db)):
+async def view_resident_by_id(
+    request: Request, resident_id: str, db=Depends(get_resident_db)
+):
     return await get_resident_by_id(db, resident_id)
 
 
@@ -97,16 +84,15 @@ async def update_resident_record(
     request: Request,
     resident_id: str,
     update_data: RegistrationCreate,
-    db=Depends(get_db),
+    db=Depends(get_resident_db),
     current_user: Dict = Depends(require_roles(["Admin"])),
 ):
-
     return await update_resident(db, resident_id, update_data)
 
 
 @router.delete("/{resident_id}")
 @limiter.limit("10/minute")
 async def delete_resident_record(
-    request: Request, resident_id: str, db=Depends(get_db)
+    request: Request, resident_id: str, db=Depends(get_resident_db)
 ):
     return await delete_resident(db, resident_id)

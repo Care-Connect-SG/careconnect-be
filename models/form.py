@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
 from typing import List, Optional
 
-from models.base import PyObjectId, ModelConfig
+from pydantic import BaseModel, Field
+
+from models.base import ModelConfig, PyObjectId
 
 
 class FormElement(BaseModel):
@@ -17,7 +18,7 @@ class FormElement(BaseModel):
 class FormCreate(BaseModel):
     title: str
     description: str
-    creator_id: str
+    creator_id: Optional[PyObjectId] = None
     json_content: List[FormElement]
     status: str
 
