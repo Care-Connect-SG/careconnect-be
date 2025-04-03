@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from enum import Enum
-from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field
+
 from models.base import ModelConfig, PyObjectId
 
 

@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from jose import JWTError, jwt
-from utils.config import SECRET_KEY
+
 from fastapi import HTTPException
+from jose import JWTError, jwt
+
+from utils.config import SECRET_KEY
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -30,16 +32,27 @@ def refresh_access_token(refresh_token: str) -> dict:
         role = payload.get("role")
         if user_id is None or email is None or role is None:
             raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+        new_access_token = create_access_token(
+            data={"id": user_id, "sub": email, "role": role}
+        )
+
+        new_refresh_token = create_refresh_token(
+            data={"id": user_id, "sub": email, "role": role}
+        )
+
+        return {
+            "access_token": new_access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+        }
+
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Refresh token expired")
-    except JWTError:
+    except JWTError as e:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-    new_access_token = create_access_token(
-        data={"id": user_id, "sub": email, "role": role}
-    )
-
-    return {"access_token": new_access_token, "token_type": "bearer"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 def verify_token(token: str, credentials_exception):

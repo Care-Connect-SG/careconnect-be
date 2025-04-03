@@ -1,7 +1,8 @@
-from fastapi import APIRouter, UploadFile
-from libs.cloudinary import upload_image
-from fastapi import Depends
 from typing import Dict
+
+from fastapi import APIRouter, Depends, UploadFile
+
+from libs.cloudinary import upload_image
 from services.user_service import get_current_user
 
 router = APIRouter(prefix="/images", tags=["Images"])

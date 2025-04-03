@@ -1,6 +1,8 @@
 import datetime
+
 from bson import ObjectId
 from fastapi import HTTPException
+
 from models.wellness_report import WellnessReportCreate, WellnessReportResponse
 
 
@@ -45,9 +47,7 @@ async def get_reports_by_resident(db, resident_id: str):
         )
 
         async for record in cursor:
-            print(f"Raw record from DB: {record}")  # Debug log
             report = WellnessReportResponse(**record)
-            print(f"Converted report: {report}")  # Debug log
             reports.append(report)
 
         return reports
@@ -129,30 +129,24 @@ async def update_wellness_report(
 
 
 async def delete_wellness_report(db, resident_id: str, report_id: str):
-    print(f"Attempting to delete report - Resident ID: {resident_id}, Report ID: {report_id}")  # Debug log
     try:
         report_obj_id = ObjectId(report_id)
         resident_obj_id = ObjectId(resident_id)
-        print(f"Converted IDs - Report: {report_obj_id}, Resident: {resident_obj_id}")  # Debug log
     except Exception as e:
-        print(f"Error converting IDs: {str(e)}")  # Debug log
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
     try:
         result = await db["wellness_reports"].delete_one(
             {"_id": report_obj_id, "resident_id": resident_obj_id}
         )
-        print(f"Delete result: {result}")  # Debug log
 
         if result.deleted_count == 0:
-            print("No report found to delete")  # Debug log
             raise HTTPException(status_code=404, detail="Wellness report not found")
 
         return {"detail": "Wellness report deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error during delete operation: {str(e)}")  # Debug log
         raise HTTPException(
             status_code=500, detail=f"Failed to delete wellness report: {str(e)}"
         )

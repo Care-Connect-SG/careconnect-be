@@ -1,11 +1,13 @@
-from fastapi import HTTPException, status, Depends
+from typing import Dict, List, Optional
+
+from bson import ObjectId
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from auth.hashing import Hash
 from auth.jwttoken import create_access_token, create_refresh_token, verify_token
-from bson import ObjectId
-from models.user import UserTagResponse, UserResponse, UserCreate, UserPasswordUpdate
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from fastapi.security import OAuth2PasswordBearer
-from typing import List, Dict, Optional
+from models.user import UserCreate, UserPasswordUpdate, UserResponse, UserTagResponse
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
@@ -152,7 +154,6 @@ async def update_user_password_service(
     try:
         new_hashed_password = Hash.bcrypt(password_data.new_password)
     except Exception as e:
-        print("Error hashing new password:", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error hashing new password",

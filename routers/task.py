@@ -1,25 +1,26 @@
 from fastapi import Depends, APIRouter, Request, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from db.connection import get_db
-from models.task import TaskResponse, TaskCreate, TaskUpdate
+from models.task import TaskCreate, TaskResponse, TaskUpdate
+from services.ai.ai_task_service import get_ai_task_suggestion
 from services.task_service import (
-    create_task,
-    get_tasks,
-    get_task_by_id,
-    update_task,
-    delete_task,
-    reassign_task,
-    complete_task,
-    reopen_task,
-    duplicate_task,
-    download_task,
-    request_task_reassignment,
     accept_task_reassignment,
-    reject_task_reassignment,
+    complete_task,
+    create_task,
+    delete_task,
+    download_task,
+    duplicate_task,
+    get_task_by_id,
+    get_tasks,
     handle_task_self,
-    get_ai_task_suggestion,
+    reassign_task,
+    reject_task_reassignment,
+    reopen_task,
+    request_task_reassignment,
+    update_task,
 )
-from services.ai_task_service import get_enhanced_ai_task_suggestion
+from services.user_service import get_current_user, require_roles
 from utils.limiter import limiter
 from services.user_service import require_roles, get_current_user
 from typing import Optional, List
@@ -53,21 +54,31 @@ async def create_new_task(
     response_model=List[TaskResponse],
     response_model_by_alias=False,
 )
-@limiter.limit("100/minute")
+# @limiter.limit("100/minute")
 async def fetch_tasks(
     request: Request,
     search: Optional[str] = None,
-    assigned_to: Optional[str] = None,
+    nurses: Optional[str] = None,
     status: Optional[str] = None,
     priority: Optional[str] = None,
     category: Optional[str] = None,
-    date: Optional[str] = None,  # New query parameter for date (YYYY-MM-DD)
+    date: Optional[str] = None,
     db: AsyncIOMotorDatabase = Depends(get_db),
     user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
-    if user.get("role") != "Admin":
-        assigned_to = user.get("id")
-    tasks = await get_tasks(db, assigned_to, status, priority, category, search, date)
+    user_id = user.get("id")
+    user_role = user.get("role")
+    assigned_to = None
+    if user_role == "Admin" and nurses and nurses != "undefined":
+        assigned_to = nurses
+
+    if user_role != "Admin":
+        assigned_to = user_id
+
+    tasks = await get_tasks(
+        db, assigned_to, status, priority, category, search, date, user_role
+    )
+
     return tasks
 
 
@@ -140,7 +151,7 @@ async def modify_task_assignment(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def complete_task(
+async def complete_task_route(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -156,7 +167,7 @@ async def complete_task(
     response_model_by_alias=False,
 )
 @limiter.limit("10/minute")
-async def reopen_task(
+async def reopen_task_route(
     request: Request,
     task_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -183,21 +194,29 @@ async def duplicate_task_route(
 
 @router.get(
     "/{task_id}/download",
-    summary="Download a task as text file",
+    summary="Download a task as text or PDF file",
     response_class=StreamingResponse,
 )
 @limiter.limit("10/minute")
 async def download_task_route(
     request: Request,
     task_id: str,
+    format: str = "text",
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    text_content = await download_task(db, task_id)
-    return StreamingResponse(
-        io.BytesIO(text_content),
-        media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename=task-{task_id}.txt"},
-    )
+
+    content = await download_task(db, task_id, format)
+
+    if format == "text":
+        media_type = "text/plain"
+        filename = f"task-{task_id}.txt"
+    elif format == "pdf":
+        media_type = "application/pdf"
+        filename = f"task-{task_id}.pdf"
+
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+    return StreamingResponse(iter([content]), media_type=media_type, headers=headers)
 
 
 @router.post(
@@ -275,35 +294,16 @@ async def handle_task_self_route(
     return updated_task
 
 
-@router.post(
-    "/ai-suggest",
-    summary="Get AI suggestions for a new task",
+@router.get(
+    "/ai-suggestion/{resident_id}",
     response_model=TaskCreate,
-    status_code=status.HTTP_200_OK,
+    response_model_by_alias=False,
 )
-@limiter.limit("5/minute")
-async def get_ai_suggestion(
-    request: Request,
+async def get_task_suggestion(
     resident_id: str,
-    db: AsyncIOMotorDatabase = Depends(get_db),
     current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     suggestion = await get_ai_task_suggestion(db, resident_id, current_user)
-    return suggestion
 
-
-@router.post(
-    "/enhanced-ai-suggest",
-    summary="Get enhanced AI suggestions using GPT-4o Mini",
-    response_model=TaskCreate,
-    status_code=status.HTTP_200_OK,
-)
-@limiter.limit("5/minute")
-async def get_enhanced_ai_suggestion(
-    request: Request,
-    resident_id: str,
-    db: AsyncIOMotorDatabase = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
-):
-    suggestion = await get_enhanced_ai_task_suggestion(db, resident_id, current_user)
     return suggestion

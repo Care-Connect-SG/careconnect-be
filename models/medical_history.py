@@ -1,8 +1,10 @@
-from pydantic import Field, BaseModel
-from typing import Optional, Union
 from datetime import date
-from models.base import ModelConfig, PyObjectId
 from enum import Enum
+from typing import Optional, Union
+
+from pydantic import BaseModel, Field
+
+from models.base import ModelConfig, PyObjectId
 
 
 class MedicalHistoryType(str, Enum):

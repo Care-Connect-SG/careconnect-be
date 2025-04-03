@@ -1,17 +1,19 @@
 from typing import List
-from fastapi import APIRouter, Depends, Query, Request, Body
+
+from fastapi import APIRouter, Body, Depends, Query, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from db.connection import get_resident_db
 from models.medical_history import (
-    MedicalHistoryType,
     MedicalHistoryCreate,
+    MedicalHistoryType,
     MedicalHistoryUnion,
 )
 from services.medical_history_service import (
     create_medical_history,
-    update_medical_history,
     delete_medical_history,
     get_medical_history_by_resident,
+    update_medical_history,
 )
 from utils.limiter import limiter
 

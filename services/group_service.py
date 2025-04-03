@@ -1,5 +1,6 @@
-from fastapi import HTTPException
 from bson import ObjectId, errors
+from fastapi import HTTPException
+
 from models.group import GroupResponse
 
 

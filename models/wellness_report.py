@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional, List
+from pydantic import BaseModel, Field
+
 from models.base import ModelConfig, PyObjectId
 
 
@@ -23,8 +24,3 @@ class WellnessReportResponse(WellnessReportCreate, ModelConfig):
     resident_id: Optional[PyObjectId] = None
     created_at: Optional[date] = None
     updated_at: Optional[date] = None
-
-    class Config:
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {PyObjectId: str}

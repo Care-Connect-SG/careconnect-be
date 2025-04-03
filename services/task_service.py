@@ -1,13 +1,30 @@
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from models.task import TaskStatus, TaskCreate, TaskResponse, TaskUpdate, TaskPriority, TaskCategory
-from bson import ObjectId
-from fastapi import HTTPException, status
-from typing import List
 from datetime import datetime, timedelta, timezone
+from typing import List
+
+from bson import ObjectId
+from dateutil.relativedelta import relativedelta
+from fastapi import HTTPException, status
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from models.task import TaskCreate, TaskResponse, TaskStatus, TaskUpdate
+from services.group_service import get_user_groups
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
-from dateutil.relativedelta import relativedelta
-from collections import Counter
+
+from io import BytesIO
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+    PageBreak,
+)
 
 
 async def create_task(
@@ -122,10 +139,50 @@ async def get_tasks(
     category: str = None,
     search: str = None,
     date: str = None,
+    user_role: str = None,
 ) -> List[TaskResponse]:
     filters = {}
-    if assigned_to:
-        filters["assigned_to"] = ObjectId(assigned_to)
+    if user_role == "Admin":
+        if assigned_to:
+            if "," in assigned_to:
+                try:
+                    nurse_ids = [
+                        ObjectId(id.strip())
+                        for id in assigned_to.split(",")
+                        if id.strip()
+                    ]
+                    if nurse_ids:
+                        filters["assigned_to"] = {"$in": nurse_ids}
+                except Exception as e:
+                    raise Exception(f"Error processing nurse IDs: {e}")
+            else:
+                try:
+                    filters["assigned_to"] = ObjectId(assigned_to)
+                except Exception as e:
+                    raise Exception(f"Error converting nurse ID to ObjectId: {e}")
+    else:
+        try:
+            groups = await get_user_groups(db, assigned_to)
+
+            group_member_ids = set()
+            for group in groups:
+                for member in group.members:
+                    group_member_ids.add(str(member))
+
+            group_member_ids.add(assigned_to)
+
+            obj_ids = [
+                ObjectId(id) for id in group_member_ids if id and id != "undefined"
+            ]
+            if obj_ids:
+                filters["assigned_to"] = {"$in": obj_ids}
+
+        except Exception as e:
+            try:
+                filters["assigned_to"] = ObjectId(assigned_to)
+            except Exception as e2:
+                raise Exception(f"Error converting user ID to ObjectId: {e2}")
+
     if status:
         filters["status"] = status
     if priority:
@@ -231,16 +288,29 @@ async def update_task(
                     {"_id": ObjectId(task_id)}, {"$set": date_fields}
                 )
 
+            tasks_in_series = await db.tasks.find({"series_id": series_id}).to_list(
+                length=100
+            )
+            for task in tasks_in_series:
+                await update_task_status(db, task)
+
             updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
             return TaskResponse(**updated_task_doc)
 
     result = await db.tasks.update_one(
         {"_id": ObjectId(task_id)}, {"$set": update_data}
     )
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Task not found")
+    if result.modified_count == 0 and not update_data:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    elif result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found or no changes made")
+    else:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
 
-    updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+    if "status" not in update_data:
+        updated_task_doc = await update_task_status(db, updated_task_doc)
+
+    updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
     return TaskResponse(**updated_task_doc)
 
 
@@ -397,37 +467,177 @@ async def duplicate_task(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse
     return TaskResponse(**new_task)
 
 
-async def download_task(db: AsyncIOMotorDatabase, task_id: str) -> bytes:
-
+async def download_task(
+    db: AsyncIOMotorDatabase, task_id: str, format: str = "text"
+) -> bytes:
     task = await get_task_by_id(db, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
     task_dict = task.model_dump()
-    task_dict["created_at"] = task_dict["created_at"].strftime("%Y-%m-%d %H:%M:%S")
-    task_dict["due_date"] = task_dict["due_date"].strftime("%Y-%m-%d %H:%M:%S")
-    finished_at = task_dict.get("finished_at")
-    finished_at_text = (
-        f"\nFinished At: {finished_at.strftime('%Y-%m-%d %H:%M:%S')}"
-        if finished_at
-        else ""
-    )
 
-    text_content = f"""Task Details
-=============
+    task_dict = await enrich_task_with_names(db, task_dict)
+    task_dict = await enrich_task_with_room(db, task_dict)
 
-Title: {task_dict["task_title"]}
-Details: {task_dict["task_details"]}
-Status: {task_dict["status"]}
-Priority: {task_dict["priority"]}
-Category: {task_dict["category"]}
-Assigned To: {task_dict["assigned_to_name"]}
-Resident: {task_dict["resident_name"]} (Room {task_dict["resident_room"]})
-Created At: {task_dict["created_at"]}
-Due Date: {task_dict["due_date"]}{finished_at_text}
-"""
+    if format == "text":
+        content = [
+            f"Task Details",
+            f"============",
+            f"Title: {task_dict['task_title']}",
+            f"Status: {task_dict['status']}",
+            f"Priority: {task_dict['priority']}",
+            f"Category: {task_dict['category']}",
+            f"Details: {task_dict['task_details']}",
+            f"",
+            f"Resident Information",
+            f"===================",
+            f"Name: {task_dict.get('resident_name', 'N/A')}",
+            f"Room: {task_dict.get('resident_room', 'N/A')}",
+            f"",
+            f"Assignment Information",
+            f"=====================",
+            f"Assigned To: {task_dict.get('assigned_to_name', 'N/A')}",
+            f"Start Date: {task_dict['start_date'].strftime('%Y-%m-%d %H:%M')}",
+            f"Due Date: {task_dict['due_date'].strftime('%Y-%m-%d %H:%M') if task_dict.get('due_date') else 'N/A'}",
+            f"",
+            f"Additional Information",
+            f"=====================",
+            f"Created At: {task_dict['created_at'].strftime('%Y-%m-%d %H:%M')}",
+            f"Last Updated: {task_dict.get('updated_at', 'N/A')}",
+            f"Recurring: {task_dict.get('recurring', 'No')}",
+            f"Series ID: {task_dict.get('series_id', 'N/A')}",
+        ]
+        return "\n".join(content).encode()
+    elif format == "pdf":
 
-    return text_content.encode("utf-8")
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=72,
+        )
+        styles = getSampleStyleSheet()
+
+        title_style = ParagraphStyle(
+            "CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30
+        )
+
+        cell_style = ParagraphStyle(
+            "CellStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            leading=14,
+            wordWrap="CJK",
+            splitLongWords=True,
+        )
+
+        header_style = ParagraphStyle(
+            "HeaderStyle",
+            parent=styles["Normal"],
+            fontSize=10,
+            leading=14,
+            textColor=colors.white,
+            wordWrap="CJK",
+        )
+
+        story = []
+
+        story.append(Paragraph(f"Task Details: {task_dict['task_title']}", title_style))
+        story.append(Spacer(1, 12))
+
+        data = [
+            [
+                Paragraph("Status:", header_style),
+                Paragraph(task_dict["status"], cell_style),
+            ],
+            [
+                Paragraph("Priority:", header_style),
+                Paragraph(task_dict["priority"], cell_style),
+            ],
+            [
+                Paragraph("Category:", header_style),
+                Paragraph(task_dict["category"], cell_style),
+            ],
+            [
+                Paragraph("Details:", header_style),
+                Paragraph(task_dict["task_details"], cell_style),
+            ],
+            [
+                Paragraph("Resident:", header_style),
+                Paragraph(task_dict.get("resident_name", "N/A"), cell_style),
+            ],
+            [
+                Paragraph("Room:", header_style),
+                Paragraph(task_dict.get("resident_room", "N/A"), cell_style),
+            ],
+            [
+                Paragraph("Assigned To:", header_style),
+                Paragraph(task_dict.get("assigned_to_name", "N/A"), cell_style),
+            ],
+            [
+                Paragraph("Start Date:", header_style),
+                Paragraph(
+                    task_dict["start_date"].strftime("%Y-%m-%d %H:%M"), cell_style
+                ),
+            ],
+            [
+                Paragraph("Due Date:", header_style),
+                Paragraph(
+                    (
+                        task_dict["due_date"].strftime("%Y-%m-%d %H:%M")
+                        if task_dict.get("due_date")
+                        else "N/A"
+                    ),
+                    cell_style,
+                ),
+            ],
+            [
+                Paragraph("Created At:", header_style),
+                Paragraph(
+                    task_dict["created_at"].strftime("%Y-%m-%d %H:%M"), cell_style
+                ),
+            ],
+            [
+                Paragraph("Last Updated:", header_style),
+                Paragraph(str(task_dict.get("updated_at", "N/A")), cell_style),
+            ],
+            [
+                Paragraph("Recurring:", header_style),
+                Paragraph(str(task_dict.get("recurring", "No")), cell_style),
+            ],
+            [
+                Paragraph("Series ID:", header_style),
+                Paragraph(str(task_dict.get("series_id", "N/A")), cell_style),
+            ],
+        ]
+
+        table = Table(data, colWidths=[2 * inch, 4 * inch])
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (0, -1), colors.blue),
+                    ("TEXTCOLOR", (0, 0), (0, -1), colors.white),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                    ("TOPPADDING", (0, 0), (-1, -1), 12),
+                    ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ]
+            )
+        )
+
+        story.append(table)
+        doc.build(story)
+
+        pdf_bytes = buffer.getvalue()
+        buffer.close()
+        return pdf_bytes
+    else:
+        raise ValueError("Invalid format. Must be either 'text' or 'pdf'")
 
 
 async def request_task_reassignment(
@@ -576,70 +786,38 @@ async def handle_task_self(
     return TaskResponse(**updated_task)
 
 
-async def get_ai_task_suggestion(
-    db: AsyncIOMotorDatabase,
-    resident_id: str,
-    current_user: dict,
-) -> TaskCreate:
-    # Get resident's past tasks
-    past_tasks = await db.tasks.find({
-        "resident": ObjectId(resident_id),
-        "status": TaskStatus.COMPLETED
-    }).sort("created_at", -1).limit(10).to_list(length=10)
-
-    # Get resident's medical history
-    resident_db = db.client.get_database("resident")
-    medical_history = await resident_db.medical_history.find({
-        "resident_id": ObjectId(resident_id)
-    }).sort("created_at", -1).limit(5).to_list(length=5)
-
-    # Analyze task patterns
-    task_categories = Counter()
-    task_priorities = Counter()
-    task_titles = Counter()
-    
-    for task in past_tasks:
-        if task.get("category"):
-            task_categories[task["category"]] += 1
-        if task.get("priority"):
-            task_priorities[task["priority"]] += 1
-        if task.get("task_title"):
-            task_titles[task["task_title"]] += 1
-
-    # Get most common category and priority
-    most_common_category = task_categories.most_common(1)[0][0] if task_categories else None
-    most_common_priority = task_priorities.most_common(1)[0][0] if task_priorities else None
-    most_common_title = task_titles.most_common(1)[0][0] if task_titles else None
-
-    # Analyze medical history for urgency
-    is_urgent = False
-    needs_attention = False
-    recommendation_reason = []
-
-    if medical_history:
-        latest_record = medical_history[0]
-        if latest_record.get("risk_level") == "High":
-            is_urgent = True
-            needs_attention = True
-            recommendation_reason.append("High risk level detected in medical history")
-
-    # Create task suggestion
+async def update_task_status(db: AsyncIOMotorDatabase, task: dict) -> dict:
     now = datetime.now(timezone.utc)
-    suggestion = TaskCreate(
-        task_title=most_common_title or "Regular care check",
-        task_details="Based on resident's care history and medical records",
-        status=TaskStatus.ASSIGNED,
-        priority=most_common_priority or TaskPriority.MEDIUM,
-        category=most_common_category or TaskCategory.MEALS,
-        residents=[ObjectId(resident_id)],
-        start_date=now,
-        due_date=now + timedelta(hours=2),
-        is_ai_generated=True,
-        assigned_to=ObjectId(current_user["id"]),
-    )
+    task_id = task["_id"]
+    current_status = task.get("status")
 
-    # Add recommendation reason
-    if recommendation_reason:
-        suggestion.ai_recommendation_reason = " | ".join(recommendation_reason)
+    if current_status == TaskStatus.COMPLETED:
+        return task
 
-    return suggestion
+    if current_status in [
+        TaskStatus.REASSIGNMENT_REQUESTED,
+        TaskStatus.REASSIGNMENT_REJECTED,
+    ]:
+        return task
+
+    status_update = None
+
+    if (
+        "due_date" in task
+        and task["due_date"] < now
+        and current_status != TaskStatus.DELAYED
+    ):
+        status_update = TaskStatus.DELAYED
+
+    elif (
+        "due_date" in task
+        and task["due_date"] >= now
+        and current_status != TaskStatus.ASSIGNED
+    ):
+        status_update = TaskStatus.ASSIGNED
+
+    if status_update:
+        await db.tasks.update_one({"_id": task_id}, {"$set": {"status": status_update}})
+        task["status"] = status_update
+
+    return task
