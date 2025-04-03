@@ -47,7 +47,8 @@ async def get_reports_by_resident(db, resident_id: str):
         )
 
         async for record in cursor:
-            reports.append(WellnessReportResponse(**record))
+            report = WellnessReportResponse(**record)
+            reports.append(report)
 
         return reports
     except Exception as e:
@@ -131,7 +132,7 @@ async def delete_wellness_report(db, resident_id: str, report_id: str):
     try:
         report_obj_id = ObjectId(report_id)
         resident_obj_id = ObjectId(resident_id)
-    except:
+    except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
     try:

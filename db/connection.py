@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from utils.config import MONGO_URI
+import certifi
 
 
 async def get_db(request: Request):

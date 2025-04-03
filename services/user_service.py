@@ -154,7 +154,6 @@ async def update_user_password_service(
     try:
         new_hashed_password = Hash.bcrypt(password_data.new_password)
     except Exception as e:
-        print("Error hashing new password:", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error hashing new password",
