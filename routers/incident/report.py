@@ -1,10 +1,14 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
 
 from db.connection import get_db
-from models.report import ReportCreate, ReportResponse, ReportReviewCreate
+from models.report import (
+    ReportCreate,
+    ReportResponse,
+    ReportReviewCreate,
+    ResolveReportRequest,
+)
 from services.report_service import (
     add_report_review,
     approve_report,
@@ -19,8 +23,6 @@ from utils.limiter import limiter
 
 router = APIRouter(prefix="/incident/reports", tags=["Incident Management Subsystem"])
 
-class ResolveReportRequest(BaseModel):
-    resolution: str
 
 @router.post("/", summary="Create a new incident report", response_model=str)
 @limiter.limit("10/minute")
@@ -75,14 +77,22 @@ async def publish_report(request: Request, report_id: str, db=Depends(get_db)):
 @router.put("/{report_id}/review", summary="Add a report review", response_model=str)
 @limiter.limit("10/minute")
 async def review_report(
-    request: Request, report_id: str, review_data: ReportReviewCreate, db=Depends(get_db)
+    request: Request,
+    report_id: str,
+    review_data: ReportReviewCreate,
+    db=Depends(get_db),
 ):
     return await add_report_review(report_id, review_data, db)
 
 
-@router.put("/{report_id}/resolve", summary="Resolve a report review", response_model=str)
+@router.put(
+    "/{report_id}/resolve", summary="Resolve a report review", response_model=str
+)
 @limiter.limit("10/minute")
 async def resolve_report(
-    request: Request, report_id: str, resolution: ResolveReportRequest, db=Depends(get_db)
+    request: Request,
+    report_id: str,
+    resolution: ResolveReportRequest,
+    db=Depends(get_db),
 ):
     return await resolve_report_review(report_id, resolution.resolution, db)

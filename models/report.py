@@ -37,7 +37,11 @@ class ReportReview(ReportReviewCreate):
     resolution: Optional[str] = None
     status: ReportReviewStatus
     reviewed_at: Optional[datetime] = None
-    resolved_at:  Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
+
+
+class ResolveReportRequest(BaseModel):
+    resolution: str
 
 
 class ReportCreate(BaseModel):

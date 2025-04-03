@@ -3,7 +3,14 @@ from typing import Any, Dict, List
 
 from bson import ObjectId
 from fastapi import HTTPException
-from models.report import ReportCreate, ReportResponse, ReportReview, ReportReviewCreate, ReportReviewStatus, ReportStatus
+from models.report import (
+    ReportCreate,
+    ReportResponse,
+    ReportReview,
+    ReportReviewCreate,
+    ReportReviewStatus,
+    ReportStatus,
+)
 
 
 def convert_string_ids_to_objectid(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -145,8 +152,13 @@ async def update_report(report_id: str, report: ReportCreate, db) -> str:
     if not report_data:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    if report_data.get("status") == "Published" or report_data.get("status") == "Submitted":
-        raise HTTPException(status_code=400, detail="Cannot modify a submitted or published report")
+    if (
+        report_data.get("status") == "Published"
+        or report_data.get("status") == "Submitted"
+    ):
+        raise HTTPException(
+            status_code=400, detail="Cannot modify a submitted or published report"
+        )
 
     update_data = report.model_dump(exclude_unset=True)
 
@@ -249,9 +261,12 @@ async def add_report_review(report_id: str, review_data: ReportReviewCreate, db)
     report_data = await db["reports"].find_one({"_id": object_id})
     if not report_data:
         raise HTTPException(status_code=404, detail="Report not found")
-    
+
     if report_data.get("status") == "Changes Requested":
-        raise HTTPException(status_code=400, detail="Cannot review a report that is already under review")
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot review a report that is already under review",
+        )
 
     review = ReportReview(
         **review_data.model_dump(),
@@ -264,7 +279,7 @@ async def add_report_review(report_id: str, review_data: ReportReviewCreate, db)
 
     await db["reports"].update_one({"_id": object_id}, {"$set": report_data})
     return report_id
-    
+
 
 async def resolve_report_review(report_id: str, resolution: str, db) -> str:
     try:
