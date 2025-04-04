@@ -1,3 +1,4 @@
+import io
 from fastapi import Depends, APIRouter, Request, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -10,6 +11,7 @@ from services.task_service import (
     create_task,
     delete_task,
     download_task,
+    download_tasks,
     duplicate_task,
     get_task_by_id,
     get_tasks,
@@ -25,7 +27,7 @@ from utils.limiter import limiter
 from services.user_service import require_roles, get_current_user
 from typing import Optional, List
 from fastapi.responses import StreamingResponse
-import io
+from datetime import datetime
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
@@ -307,3 +309,25 @@ async def get_task_suggestion(
     suggestion = await get_ai_task_suggestion(db, resident_id, current_user)
 
     return suggestion
+
+
+@router.post(
+    "/download",
+    summary="Download multiple tasks as a single PDF file",
+    response_class=StreamingResponse,
+)
+@limiter.limit("10/minute")
+async def download_tasks_route(
+    request: Request,
+    task_ids: List[str],
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+
+    content = await download_tasks(db, task_ids)
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=tasks-{datetime.now().strftime('%Y%m%d')}.pdf"
+        },
+    )
