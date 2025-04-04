@@ -640,6 +640,181 @@ async def download_task(
         raise ValueError("Invalid format. Must be either 'text' or 'pdf'")
 
 
+async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes:
+    """Download multiple tasks in a single PDF."""
+    from io import BytesIO
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from reportlab.platypus import (
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=72,
+    )
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30
+    )
+
+    subtitle_style = ParagraphStyle(
+        "CustomSubtitle", parent=styles["Heading2"], fontSize=14, spaceAfter=20
+    )
+
+    cell_style = ParagraphStyle(
+        "CellStyle",
+        parent=styles["Normal"],
+        fontSize=10,
+        leading=14,
+        wordWrap="CJK",
+        splitLongWords=True,
+    )
+
+    header_style = ParagraphStyle(
+        "HeaderStyle",
+        parent=styles["Normal"],
+        fontSize=10,
+        leading=14,
+        textColor=colors.white,
+        wordWrap="CJK",
+    )
+
+    story = []
+
+    story.append(Paragraph("Tasks Report", title_style))
+    story.append(Spacer(1, 12))
+
+    for task_id in task_ids:
+        try:
+            task = await get_task_by_id(db, task_id)
+            task_dict = task.model_dump()
+
+            task_dict = await enrich_task_with_names(db, task_dict)
+            task_dict = await enrich_task_with_room(db, task_dict)
+
+            story.append(Paragraph(f"Task: {task_dict['task_title']}", subtitle_style))
+            story.append(Spacer(1, 12))
+
+            data = [
+                [
+                    Paragraph("Status:", header_style),
+                    Paragraph(task_dict["status"], cell_style),
+                ],
+                [
+                    Paragraph("Priority:", header_style),
+                    Paragraph(task_dict["priority"], cell_style),
+                ],
+                [
+                    Paragraph("Category:", header_style),
+                    Paragraph(task_dict["category"], cell_style),
+                ],
+                [
+                    Paragraph("Details:", header_style),
+                    Paragraph(task_dict["task_details"], cell_style),
+                ],
+                [
+                    Paragraph("Resident:", header_style),
+                    Paragraph(task_dict.get("resident_name", "N/A"), cell_style),
+                ],
+                [
+                    Paragraph("Room:", header_style),
+                    Paragraph(task_dict.get("resident_room", "N/A"), cell_style),
+                ],
+                [
+                    Paragraph("Assigned To:", header_style),
+                    Paragraph(task_dict.get("assigned_to_name", "N/A"), cell_style),
+                ],
+                [
+                    Paragraph("Start Date:", header_style),
+                    Paragraph(
+                        task_dict["start_date"].strftime("%Y-%m-%d %H:%M"), cell_style
+                    ),
+                ],
+                [
+                    Paragraph("Due Date:", header_style),
+                    Paragraph(
+                        (
+                            task_dict["due_date"].strftime("%Y-%m-%d %H:%M")
+                            if task_dict.get("due_date")
+                            else "N/A"
+                        ),
+                        cell_style,
+                    ),
+                ],
+                [
+                    Paragraph("Created At:", header_style),
+                    Paragraph(
+                        task_dict["created_at"].strftime("%Y-%m-%d %H:%M"), cell_style
+                    ),
+                ],
+                [
+                    Paragraph("Last Updated:", header_style),
+                    Paragraph(str(task_dict.get("updated_at", "N/A")), cell_style),
+                ],
+                [
+                    Paragraph("Recurring:", header_style),
+                    Paragraph(str(task_dict.get("recurring", "No")), cell_style),
+                ],
+                [
+                    Paragraph("Series ID:", header_style),
+                    Paragraph(str(task_dict.get("series_id", "N/A")), cell_style),
+                ],
+            ]
+
+            table = Table(data, colWidths=[2 * inch, 4 * inch])
+            table.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (0, -1), colors.blue),
+                        ("TEXTCOLOR", (0, 0), (0, -1), colors.white),
+                        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 10),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                        ("TOPPADDING", (0, 0), (-1, -1), 12),
+                        ("GRID", (0, 0), (-1, -1), 1, colors.black),
+                        (
+                            "VALIGN",
+                            (0, 0),
+                            (-1, -1),
+                            "TOP",
+                        ),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ]
+                )
+            )
+
+            story.append(table)
+            story.append(PageBreak())
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error processing task {task_id}: {e}"
+            )
+            continue
+
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
+
+
 async def request_task_reassignment(
     db: AsyncIOMotorDatabase,
     task_id: str,
