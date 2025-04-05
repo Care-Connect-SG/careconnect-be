@@ -50,6 +50,11 @@ To start the development server make sure you have python, and run:
 uvicorn main:app --reload
 ```
 
+To start the development server for Telegram Bot run (no need activate venv):
+```bash
+python bot.py
+```
+
 ## Workflow
 
 See Jira for list of existing issues and to create branches for them
