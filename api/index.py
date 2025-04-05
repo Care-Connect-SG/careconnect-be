@@ -12,6 +12,8 @@ from routers.health_record.fixed_medication import router as fixed_medication_ro
 from routers.health_record.medical_history import router as medical_history_router
 from routers.health_record.medication import router as medication_router
 from routers.health_record.wellness_report import router as wellness_report_router
+from routers.health_record.medication_log import router as medication_log_router
+from routers.health_record.medication_public import router as medication_public_router
 from routers.incident.form import router as form_router
 from routers.incident.report import router as report_router
 from routers.resident import router as resident_router
@@ -45,6 +47,8 @@ app.include_router(medical_history_router)
 app.include_router(image_router)
 app.include_router(fixed_medication_router)
 app.include_router(wellness_report_router)
+app.include_router(medication_log_router)
+app.include_router(medication_public_router)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
