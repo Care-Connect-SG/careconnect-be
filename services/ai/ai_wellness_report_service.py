@@ -32,7 +32,6 @@ async def get_ai_wellness_report_suggestion(
             else "Unknown Resident"
         )
 
-        # Fetch medical records from different collections
         allergies = await resident_db.allergies.find(
             {"resident_id": ObjectId(resident_id)}
         ).to_list(length=10)
@@ -52,7 +51,6 @@ async def get_ai_wellness_report_suggestion(
             {"resident_id": ObjectId(resident_id)}
         ).to_list(length=10)
 
-        # Format medical information from different collections
         medical_info_parts = []
 
         if allergies:
@@ -106,7 +104,6 @@ async def get_ai_wellness_report_suggestion(
             else "No medical history available."
         )
 
-        # Format medication information separately
         medication_info = []
         if medications:
             medication_info.extend(
