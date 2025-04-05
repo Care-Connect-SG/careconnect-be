@@ -140,8 +140,10 @@ async def get_tasks(
     search: str = None,
     date: str = None,
     user_role: str = None,
+    user_id: str = None,
 ) -> List[TaskResponse]:
     filters = {}
+
     if user_role == "Admin":
         if assigned_to:
             if "," in assigned_to:
@@ -162,26 +164,32 @@ async def get_tasks(
                     raise Exception(f"Error converting nurse ID to ObjectId: {e}")
     else:
         try:
-            groups = await get_user_groups(db, assigned_to)
+            if not user_id:
+                raise Exception("User ID is required for non-admin users")
+
+            groups = await get_user_groups(db, user_id)
 
             group_member_ids = set()
             for group in groups:
                 for member in group.members:
                     group_member_ids.add(str(member))
 
-            group_member_ids.add(assigned_to)
+            group_member_ids.add(user_id)
 
             obj_ids = [
                 ObjectId(id) for id in group_member_ids if id and id != "undefined"
             ]
+
             if obj_ids:
                 filters["assigned_to"] = {"$in": obj_ids}
+            else:
+                filters["assigned_to"] = ObjectId(user_id)
 
         except Exception as e:
             try:
-                filters["assigned_to"] = ObjectId(assigned_to)
+                filters["assigned_to"] = ObjectId(user_id)
             except Exception as e2:
-                raise Exception(f"Error converting user ID to ObjectId: {e2}")
+                raise Exception(f"Error filtering tasks: {e2}")
 
     if status:
         filters["status"] = status
