@@ -51,8 +51,9 @@ uvicorn main:app --reload
 ```
 
 To start the development server for Telegram Bot run (no need activate venv):
+
 ```bash
-python bot.py
+python -m telegram_bot.main
 ```
 
 ## Workflow
