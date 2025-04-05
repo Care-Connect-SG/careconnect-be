@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ class CarePlanResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     resident_id: Optional[PyObjectId] = None
     created_date: date
-    last_updated: Optional[date] = None
+    last_updated: Optional[datetime] = None
     medical_conditions: Optional[str] = None
     doctor_appointments: Optional[str] = None
     dietary_restrictions: Optional[str] = None

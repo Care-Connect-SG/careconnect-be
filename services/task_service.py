@@ -140,8 +140,10 @@ async def get_tasks(
     search: str = None,
     date: str = None,
     user_role: str = None,
+    user_id: str = None,
 ) -> List[TaskResponse]:
     filters = {}
+
     if user_role == "Admin":
         if assigned_to:
             if "," in assigned_to:
@@ -162,26 +164,32 @@ async def get_tasks(
                     raise Exception(f"Error converting nurse ID to ObjectId: {e}")
     else:
         try:
-            groups = await get_user_groups(db, assigned_to)
+            if not user_id:
+                raise Exception("User ID is required for non-admin users")
+
+            groups = await get_user_groups(db, user_id)
 
             group_member_ids = set()
             for group in groups:
                 for member in group.members:
                     group_member_ids.add(str(member))
 
-            group_member_ids.add(assigned_to)
+            group_member_ids.add(user_id)
 
             obj_ids = [
                 ObjectId(id) for id in group_member_ids if id and id != "undefined"
             ]
+
             if obj_ids:
                 filters["assigned_to"] = {"$in": obj_ids}
+            else:
+                filters["assigned_to"] = ObjectId(user_id)
 
         except Exception as e:
             try:
-                filters["assigned_to"] = ObjectId(assigned_to)
+                filters["assigned_to"] = ObjectId(user_id)
             except Exception as e2:
-                raise Exception(f"Error converting user ID to ObjectId: {e2}")
+                raise Exception(f"Error filtering tasks: {e2}")
 
     if status:
         filters["status"] = status
@@ -548,36 +556,49 @@ async def download_task(
         data = [
             [
                 Paragraph("Status:", header_style),
-                Paragraph(task_dict["status"], cell_style),
+                Paragraph(str(task_dict.get("status", "N/A") or "N/A"), cell_style),
             ],
             [
                 Paragraph("Priority:", header_style),
-                Paragraph(task_dict["priority"], cell_style),
+                Paragraph(str(task_dict.get("priority", "N/A") or "N/A"), cell_style),
             ],
             [
                 Paragraph("Category:", header_style),
-                Paragraph(task_dict["category"], cell_style),
+                Paragraph(str(task_dict.get("category", "N/A") or "N/A"), cell_style),
             ],
             [
                 Paragraph("Details:", header_style),
-                Paragraph(task_dict["task_details"], cell_style),
+                Paragraph(
+                    str(task_dict.get("task_details", "N/A") or "N/A"), cell_style
+                ),
             ],
             [
                 Paragraph("Resident:", header_style),
-                Paragraph(task_dict.get("resident_name", "N/A"), cell_style),
+                Paragraph(
+                    str(task_dict.get("resident_name", "N/A") or "N/A"), cell_style
+                ),
             ],
             [
                 Paragraph("Room:", header_style),
-                Paragraph(task_dict.get("resident_room", "N/A"), cell_style),
+                Paragraph(
+                    str(task_dict.get("resident_room", "N/A") or "N/A"), cell_style
+                ),
             ],
             [
                 Paragraph("Assigned To:", header_style),
-                Paragraph(task_dict.get("assigned_to_name", "N/A"), cell_style),
+                Paragraph(
+                    str(task_dict.get("assigned_to_name", "N/A") or "N/A"), cell_style
+                ),
             ],
             [
                 Paragraph("Start Date:", header_style),
                 Paragraph(
-                    task_dict["start_date"].strftime("%Y-%m-%d %H:%M"), cell_style
+                    (
+                        task_dict["start_date"].strftime("%Y-%m-%d %H:%M")
+                        if task_dict.get("start_date")
+                        else "N/A"
+                    ),
+                    cell_style,
                 ),
             ],
             [
@@ -594,20 +615,25 @@ async def download_task(
             [
                 Paragraph("Created At:", header_style),
                 Paragraph(
-                    task_dict["created_at"].strftime("%Y-%m-%d %H:%M"), cell_style
+                    (
+                        task_dict["created_at"].strftime("%Y-%m-%d %H:%M")
+                        if task_dict.get("created_at")
+                        else "N/A"
+                    ),
+                    cell_style,
                 ),
             ],
             [
                 Paragraph("Last Updated:", header_style),
-                Paragraph(str(task_dict.get("updated_at", "N/A")), cell_style),
+                Paragraph(str(task_dict.get("updated_at", "N/A") or "N/A"), cell_style),
             ],
             [
                 Paragraph("Recurring:", header_style),
-                Paragraph(str(task_dict.get("recurring", "No")), cell_style),
+                Paragraph(str(task_dict.get("recurring", "No") or "No"), cell_style),
             ],
             [
                 Paragraph("Series ID:", header_style),
-                Paragraph(str(task_dict.get("series_id", "N/A")), cell_style),
+                Paragraph(str(task_dict.get("series_id", "N/A") or "N/A"), cell_style),
             ],
         ]
 
@@ -642,20 +668,6 @@ async def download_task(
 
 async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes:
     """Download multiple tasks in a single PDF."""
-    from io import BytesIO
-
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.lib.units import inch
-    from reportlab.platypus import (
-        PageBreak,
-        Paragraph,
-        SimpleDocTemplate,
-        Spacer,
-        Table,
-        TableStyle,
-    )
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -707,42 +719,64 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
             task_dict = await enrich_task_with_names(db, task_dict)
             task_dict = await enrich_task_with_room(db, task_dict)
 
-            story.append(Paragraph(f"Task: {task_dict['task_title']}", subtitle_style))
+            story.append(
+                Paragraph(
+                    f"Task: {task_dict.get('task_title', 'Untitled')}", subtitle_style
+                )
+            )
             story.append(Spacer(1, 12))
 
             data = [
                 [
                     Paragraph("Status:", header_style),
-                    Paragraph(task_dict["status"], cell_style),
+                    Paragraph(str(task_dict.get("status", "N/A") or "N/A"), cell_style),
                 ],
                 [
                     Paragraph("Priority:", header_style),
-                    Paragraph(task_dict["priority"], cell_style),
+                    Paragraph(
+                        str(task_dict.get("priority", "N/A") or "N/A"), cell_style
+                    ),
                 ],
                 [
                     Paragraph("Category:", header_style),
-                    Paragraph(task_dict["category"], cell_style),
+                    Paragraph(
+                        str(task_dict.get("category", "N/A") or "N/A"), cell_style
+                    ),
                 ],
                 [
                     Paragraph("Details:", header_style),
-                    Paragraph(task_dict["task_details"], cell_style),
+                    Paragraph(
+                        str(task_dict.get("task_details", "N/A") or "N/A"), cell_style
+                    ),
                 ],
                 [
                     Paragraph("Resident:", header_style),
-                    Paragraph(task_dict.get("resident_name", "N/A"), cell_style),
+                    Paragraph(
+                        str(task_dict.get("resident_name", "N/A") or "N/A"), cell_style
+                    ),
                 ],
                 [
                     Paragraph("Room:", header_style),
-                    Paragraph(task_dict.get("resident_room", "N/A"), cell_style),
+                    Paragraph(
+                        str(task_dict.get("resident_room", "N/A") or "N/A"), cell_style
+                    ),
                 ],
                 [
                     Paragraph("Assigned To:", header_style),
-                    Paragraph(task_dict.get("assigned_to_name", "N/A"), cell_style),
+                    Paragraph(
+                        str(task_dict.get("assigned_to_name", "N/A") or "N/A"),
+                        cell_style,
+                    ),
                 ],
                 [
                     Paragraph("Start Date:", header_style),
                     Paragraph(
-                        task_dict["start_date"].strftime("%Y-%m-%d %H:%M"), cell_style
+                        (
+                            task_dict["start_date"].strftime("%Y-%m-%d %H:%M")
+                            if task_dict.get("start_date")
+                            else "N/A"
+                        ),
+                        cell_style,
                     ),
                 ],
                 [
@@ -759,20 +793,31 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
                 [
                     Paragraph("Created At:", header_style),
                     Paragraph(
-                        task_dict["created_at"].strftime("%Y-%m-%d %H:%M"), cell_style
+                        (
+                            task_dict["created_at"].strftime("%Y-%m-%d %H:%M")
+                            if task_dict.get("created_at")
+                            else "N/A"
+                        ),
+                        cell_style,
                     ),
                 ],
                 [
                     Paragraph("Last Updated:", header_style),
-                    Paragraph(str(task_dict.get("updated_at", "N/A")), cell_style),
+                    Paragraph(
+                        str(task_dict.get("updated_at", "N/A") or "N/A"), cell_style
+                    ),
                 ],
                 [
                     Paragraph("Recurring:", header_style),
-                    Paragraph(str(task_dict.get("recurring", "No")), cell_style),
+                    Paragraph(
+                        str(task_dict.get("recurring", "No") or "No"), cell_style
+                    ),
                 ],
                 [
                     Paragraph("Series ID:", header_style),
-                    Paragraph(str(task_dict.get("series_id", "N/A")), cell_style),
+                    Paragraph(
+                        str(task_dict.get("series_id", "N/A") or "N/A"), cell_style
+                    ),
                 ],
             ]
 
@@ -804,9 +849,7 @@ async def download_tasks(db: AsyncIOMotorDatabase, task_ids: List[str]) -> bytes
             story.append(PageBreak())
 
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Error processing task {task_id}: {e}"
-            )
+            HTTPException(status_code=404, detail=f"Error processing task: {e}")
             continue
 
     doc.build(story)

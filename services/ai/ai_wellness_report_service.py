@@ -14,7 +14,7 @@ from utils.config import OPENAI_API_KEY
 
 
 async def get_ai_wellness_report_suggestion(
-    db, resident_id: str, current_user: dict
+    db, resident_id: str, current_user: dict, context: str = ""
 ) -> WellnessReportCreate:
     try:
         resident_db = db.client.get_database("resident")
@@ -32,25 +32,88 @@ async def get_ai_wellness_report_suggestion(
             else "Unknown Resident"
         )
 
-        medical_records = (
-            await resident_db.medical_history.find(
-                {"resident_id": ObjectId(resident_id)}
-            )
-            .sort("created_at", -1)
-            .limit(5)
-            .to_list(length=5)
-        )
+        allergies = await resident_db.allergies.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        chronic_illnesses = await resident_db.chronic_illnesses.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        immunizations = await resident_db.immunizations.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        surgical_history = await resident_db.surgical_history.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        conditions = await resident_db.conditions.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        medications = await resident_db.medications.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
 
-        medical_info = (
-            "\n".join(
+        medical_info_parts = []
+
+        if allergies:
+            medical_info_parts.append("Allergies:")
+            medical_info_parts.extend(
                 [
-                    f"- Condition: {record.get('condition', 'Unknown')}, Risk Level: {record.get('risk_level', 'Unknown')}, "
-                    f"Notes: {record.get('notes', 'No notes')}"
-                    for record in medical_records
+                    f"- {allergy.get('allergen', 'Unknown')}: {allergy.get('reaction_description', 'No reaction details')}"
+                    for allergy in allergies
                 ]
             )
-            if medical_records
+
+        if chronic_illnesses:
+            medical_info_parts.append("\nChronic Illnesses:")
+            medical_info_parts.extend(
+                [
+                    f"- {illness.get('illness_name', 'Unknown')}: {illness.get('current_treatment_plan', 'No additional notes')}"
+                    for illness in chronic_illnesses
+                ]
+            )
+
+        if immunizations:
+            medical_info_parts.append("\nImmunizations:")
+            medical_info_parts.extend(
+                [
+                    f"- {immunization.get('vaccine', 'Unknown')} on {immunization.get('date_administered', 'Unknown')}"
+                    for immunization in immunizations
+                ]
+            )
+
+        if surgical_history:
+            medical_info_parts.append("\nSurgical History:")
+            medical_info_parts.extend(
+                [
+                    f"- {surgery.get('procedure', 'Unknown')} on {surgery.get('surgery_date', 'Unknown')}: {surgery.get('complications', 'No additional notes')}"
+                    for surgery in surgical_history
+                ]
+            )
+
+        if conditions:
+            medical_info_parts.append("\nCurrent Conditions:")
+            medical_info_parts.extend(
+                [
+                    f"- {condition.get('condition', 'Unknown')}: {condition.get('notes', 'No additional notes')}"
+                    for condition in conditions
+                ]
+            )
+
+        medical_info = (
+            "\n".join(medical_info_parts)
+            if medical_info_parts
             else "No medical history available."
+        )
+
+        medication_info = []
+        if medications:
+            medication_info.extend(
+                [
+                    f"- {med.get('medication_name', 'Unknown')} ({med.get('dosage', 'Unknown')}): {med.get('frequency', 'Unknown')} - {med.get('notes', 'No additional notes')}"
+                    for med in medications
+                ]
+            )
+        medication_update = (
+            "\n".join(medication_info) if medication_info else "No current medications."
         )
 
         vital_signs = (
@@ -88,7 +151,7 @@ async def get_ai_wellness_report_suggestion(
             "\n".join(
                 [
                     f"Report Date: {report.get('date', 'Unknown')}\n"
-                    f"Monthly Summary: {report.get('monthly_summary', 'No summary')}\n"
+                    f"Summary: {report.get('summary', 'No summary')}\n"
                     f"Medical Summary: {report.get('medical_summary', 'No medical summary')}\n"
                     f"Medication Update: {report.get('medication_update', 'No medication update')}\n"
                     f"Nutrition & Hydration: {report.get('nutrition_hydration', 'No nutrition info')}\n"
@@ -103,10 +166,14 @@ async def get_ai_wellness_report_suggestion(
             else "No previous wellness reports available."
         )
 
+        additional_context = (
+            context if context.strip() else "No additional context provided."
+        )
+
         template = """
-        You are a healthcare AI assistant. Based on the resident's medical history, vital signs, and previous wellness reports,
+        You are a healthcare AI assistant. Based on the resident's medical history, vital signs, previous wellness reports, and any additional context provided,
         generate a comprehensive wellness report that includes:
-        1. Monthly summary of overall health and care
+        1. Summary of overall health and care
         2. Medical condition updates and changes
         3. Medication adherence and updates
         4. Nutrition and hydration status
@@ -119,17 +186,23 @@ async def get_ai_wellness_report_suggestion(
         Medical History:
         {medical_info}
 
+        Current Medications:
+        {medication_update}
+
         Vital Signs:
         {vital_signs_info}
 
         Previous Wellness Reports:
         {past_reports_info}
 
+        Additional Context Provided by Staff:
+        {additional_context}
+
         Current Time: {current_time}
 
         Please provide the report in the following JSON format:
         {{
-            "monthly_summary": "A comprehensive summary of the resident's health and care for the month, including trends from previous reports",
+            "summary": "A comprehensive summary of the resident's health and care for the month, including trends from previous reports",
             "medical_summary": "Detailed analysis of medical conditions and changes, comparing with previous reports",
             "medication_update": "Analysis of medication adherence and any concerns, noting any changes from previous reports",
             "nutrition_hydration": "Assessment of nutrition and hydration status, tracking changes over time",
@@ -146,6 +219,8 @@ async def get_ai_wellness_report_suggestion(
         Make sure your response is ONLY valid JSON with no extra text before or after. Check that all field values are valid and each field has a value.
         The confidence score should reflect how confident you are in the accuracy of your analysis based on the available data.
         Pay special attention to trends and changes over time from the previous wellness reports.
+
+        Focus especially on any new information provided in the Additional Context section.
         """
 
         prompt = PromptTemplate(
@@ -153,8 +228,10 @@ async def get_ai_wellness_report_suggestion(
             input_variables=[
                 "resident_name",
                 "medical_info",
+                "medication_update",
                 "vital_signs_info",
                 "past_reports_info",
+                "additional_context",
                 "current_time",
             ],
         )
@@ -170,8 +247,10 @@ async def get_ai_wellness_report_suggestion(
                     {
                         "resident_name": resident_name,
                         "medical_info": medical_info,
+                        "medication_update": medication_update,
                         "vital_signs_info": vital_signs_info,
                         "past_reports_info": past_reports_info,
+                        "additional_context": additional_context,
                         "current_time": datetime.now(timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         ),
@@ -203,9 +282,7 @@ async def get_ai_wellness_report_suggestion(
                 detail=f"Failed to parse AI response: {str(e)}",
             )
 
-        if not suggestion.get("monthly_summary") or not suggestion.get(
-            "medical_summary"
-        ):
+        if not suggestion.get("summary") or not suggestion.get("medical_summary"):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="AI response missing required fields",
@@ -214,7 +291,7 @@ async def get_ai_wellness_report_suggestion(
         try:
             report_create = WellnessReportCreate(
                 date=datetime.strptime(suggestion.get("date"), "%Y-%m-%d").date(),
-                monthly_summary=suggestion.get("monthly_summary"),
+                summary=suggestion.get("summary"),
                 medical_summary=suggestion.get("medical_summary"),
                 medication_update=suggestion.get("medication_update"),
                 nutrition_hydration=suggestion.get("nutrition_hydration"),

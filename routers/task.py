@@ -70,15 +70,21 @@ async def fetch_tasks(
 ):
     user_id = user.get("id")
     user_role = user.get("role")
+
     assigned_to = None
     if user_role == "Admin" and nurses and nurses != "undefined":
         assigned_to = nurses
 
-    if user_role != "Admin":
-        assigned_to = user_id
-
     tasks = await get_tasks(
-        db, assigned_to, status, priority, category, search, date, user_role
+        db=db,
+        assigned_to=assigned_to,
+        status=status,
+        priority=priority,
+        category=category,
+        search=search,
+        date=date,
+        user_role=user_role,
+        user_id=user_id,
     )
 
     return tasks

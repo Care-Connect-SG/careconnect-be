@@ -65,7 +65,14 @@ async def update_careplan(
     except:
         raise HTTPException(status_code=400, detail="Invalid careplan ID")
 
+    existing_careplan = await db["careplans"].find_one({"_id": careplan_oid})
+    if not existing_careplan:
+        raise HTTPException(status_code=404, detail="Care plan not found")
+
     update_dict = update_data.model_dump(exclude_unset=True)
+
+    update_dict.pop("id", None)
+    update_dict.pop("resident_id", None)
 
     if "created_date" in update_dict and isinstance(
         update_dict["created_date"], datetime.date
@@ -74,14 +81,11 @@ async def update_careplan(
             update_dict["created_date"], datetime.time.min
         )
 
+    update_dict["last_updated"] = datetime.datetime.now()
+
     result = await db["careplans"].update_one(
         {"_id": careplan_oid}, {"$set": update_dict}
     )
-
-    if result.modified_count == 0:
-        record = await db["careplans"].find_one({"_id": careplan_oid})
-        if not record:
-            raise HTTPException(status_code=404, detail="Care plan not found")
 
     updated_record = await db["careplans"].find_one({"_id": careplan_oid})
     return CarePlanResponse(**updated_record)

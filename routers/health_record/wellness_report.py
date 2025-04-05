@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, status, Body
 from typing import List
 
 from db.connection import get_resident_db
@@ -101,28 +101,13 @@ async def delete_report(
 async def get_ai_suggestion(
     request: Request,
     resident_id: str,
+    context_data: dict = Body(default={}),
     db=Depends(get_resident_db),
     current_user: dict = Depends(get_current_user),
     user: dict = Depends(require_roles(["Admin", "Nurse"])),
 ):
-
+    context = context_data.get("context", "")
     ai_suggestion = await get_ai_wellness_report_suggestion(
-        db, resident_id, current_user
+        db, resident_id, current_user, context
     )
     return ai_suggestion
-
-
-@router.post(
-    "/generate-ai", response_model=WellnessReportResponse, response_model_by_alias=False
-)
-@limiter.limit("5/minute")
-async def generate_ai_report(
-    request: Request,
-    resident_id: str,
-    suggestion: WellnessReportCreate,
-    db=Depends(get_resident_db),
-    current_user: dict = Depends(get_current_user),
-    user: dict = Depends(require_roles(["Admin", "Nurse"])),
-):
-
-    return await create_wellness_report(db, resident_id, suggestion)

@@ -7,7 +7,7 @@ from models.base import ModelConfig, PyObjectId
 
 class WellnessReportCreate(BaseModel):
     date: date
-    monthly_summary: Optional[str] = None
+    summary: Optional[str] = None
     medical_summary: Optional[str] = None
     medication_update: Optional[str] = None
     nutrition_hydration: Optional[str] = None
