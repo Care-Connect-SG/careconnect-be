@@ -11,9 +11,7 @@ router = APIRouter(prefix="/medication-logs", tags=["Medication Logs"])
 
 @router.post("/", response_model=MedicationAdministrationLog)
 async def log_medication_administration(
-    resident_id: str,
-    medication_id: str,
-    db=Depends(get_resident_db)
+    resident_id: str, medication_id: str, db=Depends(get_resident_db)
 ):
     if not ObjectId.is_valid(resident_id) or not ObjectId.is_valid(medication_id):
         raise HTTPException(status_code=400, detail="Invalid resident or medication ID")
@@ -22,7 +20,7 @@ async def log_medication_administration(
         "resident_id": ObjectId(resident_id),
         "medication_id": ObjectId(medication_id),
         "nurse": None,  # will be filled in later
-        "administered_at": datetime.utcnow()
+        "administered_at": datetime.utcnow(),
     }
 
     result = await db["medication_logs"].insert_one(log)
@@ -34,7 +32,7 @@ async def log_medication_administration(
 async def get_medication_logs(
     resident_id: Optional[str] = None,
     date: Optional[str] = Query(None, description="Format: YYYY-MM-DD"),
-    db=Depends(get_resident_db)
+    db=Depends(get_resident_db),
 ):
     query = {}
 
@@ -49,7 +47,9 @@ async def get_medication_logs(
             next_day = date_obj + timedelta(days=1)
             query["administered_at"] = {"$gte": date_obj, "$lt": next_day}
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+            raise HTTPException(
+                status_code=400, detail="Invalid date format. Use YYYY-MM-DD."
+            )
 
     logs = []
     cursor = db["medication_logs"].find(query)
