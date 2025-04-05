@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from pydantic import Field
+
 from models.base import ModelConfig, PyObjectId
 
 

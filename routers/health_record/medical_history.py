@@ -4,17 +4,12 @@ from fastapi import APIRouter, Body, Depends, Query, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from db.connection import get_resident_db
-from models.medical_history import (
-    MedicalHistoryCreate,
-    MedicalHistoryType,
-    MedicalHistoryUnion,
-)
-from services.medical_history_service import (
-    create_medical_history,
-    delete_medical_history,
-    get_medical_history_by_resident,
-    update_medical_history,
-)
+from models.medical_history import (MedicalHistoryCreate, MedicalHistoryType,
+                                    MedicalHistoryUnion)
+from services.medical_history_service import (create_medical_history,
+                                              delete_medical_history,
+                                              get_medical_history_by_resident,
+                                              update_medical_history)
 from utils.limiter import limiter
 
 router = APIRouter(

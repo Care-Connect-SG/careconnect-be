@@ -4,15 +4,16 @@ This module uses OpenAI to generate task suggestions based on resident data.
 """
 
 import json
-from datetime import datetime, timezone, timedelta
-from bson import ObjectId
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-import httpx
 
+import httpx
+from bson import ObjectId
 from fastapi import HTTPException
-from models.task import TaskCreate, TaskStatus, TaskPriority, TaskCategory
-from utils.config import OPENAI_API_KEY
 from openai import AsyncOpenAI
+
+from models.task import TaskCategory, TaskCreate, TaskPriority, TaskStatus
+from utils.config import OPENAI_API_KEY
 
 http_client = httpx.AsyncClient(verify=False)
 client = AsyncOpenAI(api_key=OPENAI_API_KEY, http_client=http_client)

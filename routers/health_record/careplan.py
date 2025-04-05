@@ -4,13 +4,10 @@ from fastapi import APIRouter, Depends, Request, status
 
 from db.connection import get_resident_db
 from models.careplan import CarePlanCreate, CarePlanResponse
-from services.careplan_service import (
-    create_careplan,
-    delete_careplan,
-    get_careplan_by_id,
-    get_careplans_by_resident,
-    update_careplan,
-)
+from services.careplan_service import (create_careplan, delete_careplan,
+                                       get_careplan_by_id,
+                                       get_careplans_by_resident,
+                                       update_careplan)
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/residents/{resident_id}/careplan", tags=["Careplan"])

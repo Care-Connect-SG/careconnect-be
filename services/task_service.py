@@ -1,30 +1,22 @@
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from typing import List
 
 from bson import ObjectId
 from dateutil.relativedelta import relativedelta
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import (PageBreak, Paragraph, SimpleDocTemplate,
+                                Spacer, Table, TableStyle)
 
 from models.task import TaskCreate, TaskResponse, TaskStatus, TaskUpdate
 from services.group_service import get_user_groups
 from services.resident_service import get_resident_full_name, get_resident_room
 from services.user_service import get_assigned_to_name
-
-from io import BytesIO
-
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-    PageBreak,
-)
 
 
 async def create_task(

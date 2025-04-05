@@ -76,6 +76,14 @@ async def delete_activity(
     current_user: dict = Depends(get_current_user),
     request: Request = None,
 ):
-    return await activity_service.delete_activity(
-        activity_id, current_user["id"], request
-    )
+    try:
+        print(f"Delete request for activity_id: {activity_id}")
+        print(f"Current user: {current_user}")
+
+        result = await activity_service.delete_activity(
+            activity_id, current_user, request
+        )
+        return result
+    except Exception as e:
+        print(f"Error in delete_activity endpoint: {str(e)}")
+        raise

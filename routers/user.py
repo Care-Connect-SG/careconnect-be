@@ -5,26 +5,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from auth.jwttoken import refresh_access_token
 from db.connection import get_db
-from models.user import (
-    RefreshTokenRequest,
-    Token,
-    UserCreate,
-    UserPasswordUpdate,
-    UserResponse,
-    UserUpdate,
-)
-from services.user_service import (
-    delete_user,
-    get_all_users,
-    get_current_user,
-    get_user_by_id,
-    get_user_role,
-    login_user,
-    register_user,
-    require_roles,
-    update_user,
-    update_user_password_service,
-)
+from models.user import (RefreshTokenRequest, Token, UserCreate,
+                         UserPasswordUpdate, UserResponse, UserUpdate)
+from services.user_service import (delete_user, get_all_users,
+                                   get_current_user, get_user_by_id,
+                                   get_user_role, login_user, register_user,
+                                   require_roles, update_user,
+                                   update_user_password_service)
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/users", tags=["Users"])

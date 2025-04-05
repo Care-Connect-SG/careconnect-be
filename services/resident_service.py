@@ -5,11 +5,8 @@ from typing import List, Optional
 from bson import ObjectId
 from fastapi import HTTPException
 
-from models.resident import (
-    RegistrationCreate,
-    RegistrationResponse,
-    ResidentTagResponse,
-)
+from models.resident import (RegistrationCreate, RegistrationResponse,
+                             ResidentTagResponse)
 
 
 async def create_residentInfo(

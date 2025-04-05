@@ -5,7 +5,6 @@ from fastapi import FastAPI, HTTPException, Request
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from utils.config import MONGO_URI
-import certifi
 
 
 async def get_db(request: Request):
@@ -22,6 +21,8 @@ async def lifespan(app: FastAPI):
         app.mongodb_client = AsyncIOMotorClient(
             MONGO_URI,
             serverSelectionTimeoutMS=5000,
+            tlsCAFile=certifi.where(),
+            ssl=True,
         )
         app.primary_db = app.mongodb_client.get_database("caregiver")
         await app.primary_db.command("ping")

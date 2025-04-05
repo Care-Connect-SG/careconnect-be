@@ -4,15 +4,11 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from db.connection import get_resident_db
 from models.resident import RegistrationCreate, RegistrationResponse
-from services.resident_service import (
-    create_residentInfo,
-    delete_resident,
-    get_all_residents,
-    get_resident_by_id,
-    get_residents_count_with_search,
-    get_residents_with_pagination,
-    update_resident,
-)
+from services.resident_service import (create_residentInfo, delete_resident,
+                                       get_all_residents, get_resident_by_id,
+                                       get_residents_count_with_search,
+                                       get_residents_with_pagination,
+                                       update_resident)
 from services.user_service import require_roles
 from utils.limiter import limiter
 
