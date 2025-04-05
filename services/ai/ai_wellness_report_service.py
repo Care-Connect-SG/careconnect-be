@@ -33,61 +33,91 @@ async def get_ai_wellness_report_suggestion(
         )
 
         # Fetch medical records from different collections
-        allergies = await resident_db.allergies.find({"resident_id": ObjectId(resident_id)}).to_list(length=10)
-        chronic_illnesses = await resident_db.chronic_illnesses.find({"resident_id": ObjectId(resident_id)}).to_list(length=10)
-        immunizations = await resident_db.immunizations.find({"resident_id": ObjectId(resident_id)}).to_list(length=10)
-        surgical_history = await resident_db.surgical_history.find({"resident_id": ObjectId(resident_id)}).to_list(length=10)
-        conditions = await resident_db.conditions.find({"resident_id": ObjectId(resident_id)}).to_list(length=10)
-        medications = await resident_db.medications.find({"resident_id": ObjectId(resident_id)}).to_list(length=10)
+        allergies = await resident_db.allergies.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        chronic_illnesses = await resident_db.chronic_illnesses.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        immunizations = await resident_db.immunizations.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        surgical_history = await resident_db.surgical_history.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        conditions = await resident_db.conditions.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
+        medications = await resident_db.medications.find(
+            {"resident_id": ObjectId(resident_id)}
+        ).to_list(length=10)
 
         # Format medical information from different collections
         medical_info_parts = []
-        
+
         if allergies:
             medical_info_parts.append("Allergies:")
-            medical_info_parts.extend([
-                f"- {allergy.get('allergen', 'Unknown')}: {allergy.get('reaction_description', 'No reaction details')}"
-                for allergy in allergies
-            ])
-        
+            medical_info_parts.extend(
+                [
+                    f"- {allergy.get('allergen', 'Unknown')}: {allergy.get('reaction_description', 'No reaction details')}"
+                    for allergy in allergies
+                ]
+            )
+
         if chronic_illnesses:
             medical_info_parts.append("\nChronic Illnesses:")
-            medical_info_parts.extend([
-                f"- {illness.get('illness_name', 'Unknown')}: {illness.get('current_treatment_plan', 'No additional notes')}"
-                for illness in chronic_illnesses
-            ])
-        
+            medical_info_parts.extend(
+                [
+                    f"- {illness.get('illness_name', 'Unknown')}: {illness.get('current_treatment_plan', 'No additional notes')}"
+                    for illness in chronic_illnesses
+                ]
+            )
+
         if immunizations:
             medical_info_parts.append("\nImmunizations:")
-            medical_info_parts.extend([
-                f"- {immunization.get('vaccine', 'Unknown')} on {immunization.get('date_administered', 'Unknown')}"
-                for immunization in immunizations
-            ])
-        
+            medical_info_parts.extend(
+                [
+                    f"- {immunization.get('vaccine', 'Unknown')} on {immunization.get('date_administered', 'Unknown')}"
+                    for immunization in immunizations
+                ]
+            )
+
         if surgical_history:
             medical_info_parts.append("\nSurgical History:")
-            medical_info_parts.extend([
-                f"- {surgery.get('procedure', 'Unknown')} on {surgery.get('surgery_date', 'Unknown')}: {surgery.get('complications', 'No additional notes')}"
-                for surgery in surgical_history
-            ])
+            medical_info_parts.extend(
+                [
+                    f"- {surgery.get('procedure', 'Unknown')} on {surgery.get('surgery_date', 'Unknown')}: {surgery.get('complications', 'No additional notes')}"
+                    for surgery in surgical_history
+                ]
+            )
 
         if conditions:
             medical_info_parts.append("\nCurrent Conditions:")
-            medical_info_parts.extend([
-                f"- {condition.get('condition', 'Unknown')}: {condition.get('notes', 'No additional notes')}"
-                for condition in conditions
-            ])
+            medical_info_parts.extend(
+                [
+                    f"- {condition.get('condition', 'Unknown')}: {condition.get('notes', 'No additional notes')}"
+                    for condition in conditions
+                ]
+            )
 
-        medical_info = "\n".join(medical_info_parts) if medical_info_parts else "No medical history available."
+        medical_info = (
+            "\n".join(medical_info_parts)
+            if medical_info_parts
+            else "No medical history available."
+        )
 
         # Format medication information separately
         medication_info = []
         if medications:
-            medication_info.extend([
-                f"- {med.get('medication_name', 'Unknown')} ({med.get('dosage', 'Unknown')}): {med.get('frequency', 'Unknown')} - {med.get('notes', 'No additional notes')}"
-                for med in medications
-            ])
-        medication_update = "\n".join(medication_info) if medication_info else "No current medications."
+            medication_info.extend(
+                [
+                    f"- {med.get('medication_name', 'Unknown')} ({med.get('dosage', 'Unknown')}): {med.get('frequency', 'Unknown')} - {med.get('notes', 'No additional notes')}"
+                    for med in medications
+                ]
+            )
+        medication_update = (
+            "\n".join(medication_info) if medication_info else "No current medications."
+        )
 
         vital_signs = (
             await resident_db.vital_signs.find({"resident_id": ObjectId(resident_id)})
