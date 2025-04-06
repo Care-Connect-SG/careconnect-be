@@ -20,7 +20,7 @@ client = AsyncOpenAI(api_key=OPENAI_API_KEY, http_client=http_client)
 
 
 async def get_ai_task_suggestion(
-    db, resident_id: str, current_user: dict
+    db, resident_id: str, current_user: dict, form_data: dict = None
 ) -> Optional[TaskCreate]:
     """
     Generate an AI task suggestion for a resident using GPT-4.
@@ -29,9 +29,10 @@ async def get_ai_task_suggestion(
         db: MongoDB database connection
         resident_id: ID of the resident to create a task for
         current_user: Current user information
+        form_data: Optional form data including AI context and existing form values
 
     Returns:
-        Optional[TaskCreate]: A task object with AI-generated suggestions, or None if generation fails
+        Optional[TaskCreate]: A task object with AI-generated suggestions
     """
     try:
         resident_db = db.client.get_database("resident")
@@ -88,6 +89,42 @@ async def get_ai_task_suggestion(
             ]
         )
 
+        ai_context = form_data.get("ai_context", "") if form_data else ""
+
+        current_form_data = ""
+        if form_data:
+            form_data_items = []
+
+            if form_data.get("task_title"):
+                form_data_items.append(f"Task Title: {form_data['task_title']}")
+
+            if form_data.get("task_details"):
+                form_data_items.append(f"Task Details: {form_data['task_details']}")
+
+            if form_data.get("priority"):
+                form_data_items.append(f"Priority: {form_data['priority']}")
+
+            if form_data.get("category"):
+                form_data_items.append(f"Category: {form_data['category']}")
+
+            if form_data.get("start_date"):
+                form_data_items.append(f"Start Date: {form_data['start_date']}")
+
+            if form_data.get("due_date"):
+                form_data_items.append(f"Due Date: {form_data['due_date']}")
+
+            if form_data.get("recurring"):
+                form_data_items.append(f"Recurring: {form_data['recurring']}")
+
+            if form_data_items:
+                current_form_data = "Current Task Information:\n" + "\n".join(
+                    form_data_items
+                )
+
+        additional_context = (
+            f"\nAdditional Context From User:\n{ai_context}" if ai_context else ""
+        )
+
         prompt = f"""As a healthcare assistant AI, suggest a unique and specific care task for the resident based on the following information:
 
 Resident: {resident_name}
@@ -103,8 +140,11 @@ Available Nurses:
 
 Current Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
 
+{current_form_data}{additional_context}
+
 Generate a creative and unique task that is different from the past tasks but still relevant to the resident's needs.
 Be specific and detailed in both the title and description.
+{"If current task information is provided, enhance and improve it rather than creating something completely different." if current_form_data else ""}
 
 Provide a task suggestion in this exact JSON format:
 {{
@@ -166,10 +206,30 @@ Ensure the response is ONLY valid JSON with no extra text."""
         )
 
         now = datetime.now(timezone.utc)
-        start_time = now + timedelta(hours=1)
-        due_time = now + timedelta(hours=3)
 
-        if suggestion.get("is_urgent", False):
+        if form_data and form_data.get("start_date"):
+            try:
+                start_time = datetime.fromisoformat(
+                    form_data["start_date"].replace("Z", "+00:00")
+                )
+            except (ValueError, TypeError):
+                start_time = now + timedelta(hours=1)
+        else:
+            start_time = now + timedelta(hours=1)
+
+        if form_data and form_data.get("due_date"):
+            try:
+                due_time = datetime.fromisoformat(
+                    form_data["due_date"].replace("Z", "+00:00")
+                )
+            except (ValueError, TypeError):
+                due_time = now + timedelta(hours=3)
+        else:
+            due_time = now + timedelta(hours=3)
+
+        if suggestion.get("is_urgent", False) and not (
+            form_data and (form_data.get("start_date") or form_data.get("due_date"))
+        ):
             start_time = now + timedelta(minutes=30)
             due_time = now + timedelta(hours=2)
 
@@ -182,8 +242,13 @@ Ensure the response is ONLY valid JSON with no extra text."""
             "start_date": start_time.isoformat(),
             "due_date": due_time.isoformat(),
             "is_ai_generated": True,
-            "assigned_to": str(nurses[0]["_id"]) if nurses else None,
+            "assigned_to": (
+                form_data.get("assigned_to")
+                if form_data and form_data.get("assigned_to")
+                else str(nurses[0]["_id"]) if nurses else None
+            ),
             "status": TaskStatus.ASSIGNED,
+            "recurring": form_data.get("recurring") if form_data else None,
         }
 
         return task_suggestion

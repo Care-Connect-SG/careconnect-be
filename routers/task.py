@@ -302,18 +302,18 @@ async def handle_task_self_route(
     return updated_task
 
 
-@router.get(
+@router.post(
     "/ai-suggestion/{resident_id}",
     response_model=TaskCreate,
     response_model_by_alias=False,
 )
 async def get_task_suggestion(
     resident_id: str,
+    form_data: dict,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    suggestion = await get_ai_task_suggestion(db, resident_id, current_user)
-
+    suggestion = await get_ai_task_suggestion(db, resident_id, current_user, form_data)
     return suggestion
 
 
