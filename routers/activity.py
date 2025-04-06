@@ -76,6 +76,5 @@ async def delete_activity(
     current_user: dict = Depends(get_current_user),
     request: Request = None,
 ):
-    return await activity_service.delete_activity(
-        activity_id, current_user["id"], request
-    )
+    result = await activity_service.delete_activity(activity_id, current_user, request)
+    return result

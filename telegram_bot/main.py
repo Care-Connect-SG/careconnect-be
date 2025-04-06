@@ -1,13 +1,10 @@
 import asyncio
-from utils.config import MONGO_URI, TELEGRAM_TOKEN
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-)
+from telegram.ext import Application, CommandHandler, ContextTypes
 
+from utils.config import MONGO_URI, TELEGRAM_TOKEN
 
 mongo_client = AsyncIOMotorClient(MONGO_URI)
 db = mongo_client["resident"]

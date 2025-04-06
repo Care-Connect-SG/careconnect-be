@@ -1,5 +1,9 @@
 import io
-from fastapi import Depends, APIRouter, Request, status
+from datetime import datetime
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, Request, status
+from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from db.connection import get_db
@@ -24,10 +28,6 @@ from services.task_service import (
 )
 from services.user_service import get_current_user, require_roles
 from utils.limiter import limiter
-from services.user_service import require_roles, get_current_user
-from typing import Optional, List
-from fastapi.responses import StreamingResponse
-from datetime import datetime
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 

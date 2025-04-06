@@ -101,10 +101,27 @@ async def update_activity(
         if not existing:
             raise HTTPException(status_code=404, detail="Activity not found")
 
-        if (
-            current_user["role"] != "Admin"
-            and str(existing["created_by"]) != current_user["id"]
-        ):
+        user_id = None
+        is_admin = False
+
+        if isinstance(current_user, dict):
+            user_id = current_user.get("id")
+            is_admin = current_user.get("role") == "Admin"
+        elif isinstance(current_user, str):
+            user_id = current_user
+        else:
+            raise HTTPException(status_code=400, detail="Invalid user format")
+
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID not provided")
+
+        activity_creator_id = None
+        if "created_by" in existing:
+            activity_creator_id = str(existing["created_by"])
+
+        user_id_str = str(user_id)
+
+        if not is_admin and activity_creator_id != user_id_str:
             raise HTTPException(
                 status_code=403, detail="Not authorized to update this activity"
             )
@@ -144,10 +161,27 @@ async def delete_activity(
         if not existing:
             raise HTTPException(status_code=404, detail="ActivityResponse not found")
 
-        if (
-            current_user["role"] != "Admin"
-            and str(existing["created_by"]) != current_user["id"]
-        ):
+        user_id = None
+        is_admin = False
+
+        if isinstance(current_user, dict):
+            user_id = current_user.get("id")
+            is_admin = current_user.get("role") == "Admin"
+        elif isinstance(current_user, str):
+            user_id = current_user
+        else:
+            raise HTTPException(status_code=400, detail="Invalid user format")
+
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID not provided")
+
+        activity_creator_id = None
+        if "created_by" in existing:
+            activity_creator_id = str(existing["created_by"])
+
+        user_id_str = str(user_id)
+
+        if not is_admin and activity_creator_id != user_id_str:
             raise HTTPException(
                 status_code=403, detail="Not authorized to delete this activity"
             )
