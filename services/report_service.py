@@ -4,9 +4,14 @@ from typing import Any, Dict, List
 from bson import ObjectId
 from fastapi import HTTPException
 
-from models.report import (ReportCreate, ReportResponse, ReportReview,
-                           ReportReviewCreate, ReportReviewStatus,
-                           ReportStatus)
+from models.report import (
+    ReportCreate,
+    ReportResponse,
+    ReportReview,
+    ReportReviewCreate,
+    ReportReviewStatus,
+    ReportStatus,
+)
 
 
 def convert_string_ids_to_objectid(data: Dict[str, Any]) -> Dict[str, Any]:

@@ -3,12 +3,22 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Request
 
 from db.connection import get_db
-from models.report import (ReportCreate, ReportResponse, ReportReviewCreate,
-                           ResolveReportRequest)
-from services.report_service import (add_report_review, approve_report,
-                                     create_report, get_report_by_id,
-                                     get_reports, remove_report,
-                                     resolve_report_review, update_report)
+from models.report import (
+    ReportCreate,
+    ReportResponse,
+    ReportReviewCreate,
+    ResolveReportRequest,
+)
+from services.report_service import (
+    add_report_review,
+    approve_report,
+    create_report,
+    get_report_by_id,
+    get_reports,
+    remove_report,
+    resolve_report_review,
+    update_report,
+)
 from utils.limiter import limiter
 
 router = APIRouter(prefix="/incident/reports", tags=["Incident Management Subsystem"])

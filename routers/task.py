@@ -9,13 +9,23 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from db.connection import get_db
 from models.task import TaskCreate, TaskResponse, TaskUpdate
 from services.ai.ai_task_service import get_ai_task_suggestion
-from services.task_service import (accept_task_reassignment, complete_task,
-                                   create_task, delete_task, download_task,
-                                   download_tasks, duplicate_task,
-                                   get_task_by_id, get_tasks, handle_task_self,
-                                   reassign_task, reject_task_reassignment,
-                                   reopen_task, request_task_reassignment,
-                                   update_task)
+from services.task_service import (
+    accept_task_reassignment,
+    complete_task,
+    create_task,
+    delete_task,
+    download_task,
+    download_tasks,
+    duplicate_task,
+    get_task_by_id,
+    get_tasks,
+    handle_task_self,
+    reassign_task,
+    reject_task_reassignment,
+    reopen_task,
+    request_task_reassignment,
+    update_task,
+)
 from services.user_service import get_current_user, require_roles
 from utils.limiter import limiter
 

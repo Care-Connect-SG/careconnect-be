@@ -101,7 +101,6 @@ async def update_activity(
         if not existing:
             raise HTTPException(status_code=404, detail="Activity not found")
 
-        # Handle both dictionary and string user inputs
         user_id = None
         is_admin = False
 
@@ -116,13 +115,10 @@ async def update_activity(
         if not user_id:
             raise HTTPException(status_code=400, detail="User ID not provided")
 
-        # Handle cases where created_by might be an ObjectId or a string
         activity_creator_id = None
         if "created_by" in existing:
-            # Convert to string representation for comparison
             activity_creator_id = str(existing["created_by"])
 
-        # Ensure user_id is also a string
         user_id_str = str(user_id)
 
         if not is_admin and activity_creator_id != user_id_str:
@@ -151,7 +147,6 @@ async def update_activity(
         raise
 
     except Exception as e:
-        print(f"Error in update_activity: {str(e)}, Type: {type(e)}")
         raise HTTPException(
             status_code=500, detail=f"Failed to update activity: {str(e)}"
         )
@@ -166,7 +161,6 @@ async def delete_activity(
         if not existing:
             raise HTTPException(status_code=404, detail="ActivityResponse not found")
 
-        # Handle both dictionary and string user inputs
         user_id = None
         is_admin = False
 
@@ -181,19 +175,11 @@ async def delete_activity(
         if not user_id:
             raise HTTPException(status_code=400, detail="User ID not provided")
 
-        # Handle cases where created_by might be an ObjectId or a string
         activity_creator_id = None
         if "created_by" in existing:
-            # Convert to string representation for comparison
             activity_creator_id = str(existing["created_by"])
 
-        # Ensure user_id is also a string
         user_id_str = str(user_id)
-
-        # Debug logging
-        print(
-            f"Activity creator ID: {activity_creator_id}, User ID: {user_id_str}, Types: {type(activity_creator_id)}, {type(user_id_str)}"
-        )
 
         if not is_admin and activity_creator_id != user_id_str:
             raise HTTPException(
@@ -205,7 +191,6 @@ async def delete_activity(
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
-        print(f"Error in delete_activity: {str(e)}, Type: {type(e)}")
         raise HTTPException(
             status_code=500, detail=f"Failed to delete activity: {str(e)}"
         )
