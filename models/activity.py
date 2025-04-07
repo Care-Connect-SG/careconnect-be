@@ -15,6 +15,7 @@ class ActivityBase(BaseModel):
     category: Optional[str] = None
     tags: Optional[str] = None
     visibility: bool = True
+    reminder_minutes: Optional[int] = None
 
 
 class ActivityCreate(ActivityBase):
@@ -25,6 +26,7 @@ class ActivityUpdate(ActivityBase):
     title: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    reminder_minutes: Optional[int] = None
 
 
 class ActivityResponse(ActivityBase, ModelConfig):
@@ -32,11 +34,3 @@ class ActivityResponse(ActivityBase, ModelConfig):
     created_by: Optional[PyObjectId] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
-class ActivityFilter(BaseModel):
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    category: Optional[str] = None
-    tags: Optional[str] = None
-    search: Optional[str] = None
