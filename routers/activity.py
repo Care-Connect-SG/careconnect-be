@@ -37,7 +37,7 @@ async def list_activities(
     sort_by: str = Query("start_time", regex="^(start_time|title|category)$"),
     sort_order: str = Query("asc", regex="^(asc|desc)$"),
 ):
-    return await activity_service.get_activities(
+    activities = await activity_service.get_activities(
         request=request,
         start_date=start_date,
         end_date=end_date,
@@ -47,6 +47,7 @@ async def list_activities(
         sort_by=sort_by,
         sort_order=sort_order,
     )
+    return activities
 
 
 @router.get(

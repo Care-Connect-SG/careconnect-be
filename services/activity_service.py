@@ -45,10 +45,11 @@ async def get_activities(
         db = await get_db(request)
         query = {}
 
-        if start_date:
-            query["start_time"] = {"$gte": start_date}
-        if end_date:
-            query["end_time"] = {"$lte": end_date}
+        if start_date and end_date:
+            query["$and"] = [
+                {"start_time": {"$lt": end_date}},
+                {"end_time": {"$gt": start_date}},
+            ]
         if category:
             query["category"] = category
         if tags:
