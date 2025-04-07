@@ -16,8 +16,8 @@ class RegistrationCreate(BaseModel):
     emergency_contact_number: str
     relationship: str
     room_number: Optional[str] = None
-    additional_notes: Optional[List[str]] = None  # changed from str to list
-    additional_notes_timestamp: Optional[List[datetime]] = None  # list of timestamps
+    additional_notes: Optional[List[str]] = None
+    additional_notes_timestamp: Optional[List[datetime]] = None
     primary_nurse: Optional[str] = None
 
 
@@ -33,8 +33,8 @@ class RegistrationResponse(ModelConfig):
     relationship: str
     room_number: str
     admission_date: date
-    additional_notes: Optional[List[str]] = None # changed from str to list
-    additional_notes_timestamp: Optional[List[datetime]] = None  # list of timestamps
+    additional_notes: Optional[List[str]] = None
+    additional_notes_timestamp: Optional[List[datetime]] = None
     primary_nurse: Optional[str] = None
 
 
