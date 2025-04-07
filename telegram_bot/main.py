@@ -1,3 +1,4 @@
+import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -36,3 +37,11 @@ async def start_assistant_bot():
 
     print("Bot is polling... 🎯")
     await app.run_polling()
+
+
+if __name__ == "__main__":
+    import nest_asyncio
+
+    nest_asyncio.apply()
+
+    asyncio.run(start_assistant_bot())

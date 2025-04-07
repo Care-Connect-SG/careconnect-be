@@ -1,3 +1,4 @@
+import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -13,3 +14,11 @@ async def start_reminders_bot():
 
     print("Bot is polling... 🎯")
     await app.run_polling()
+
+
+if __name__ == "__main__":
+    import nest_asyncio
+
+    nest_asyncio.apply()
+
+    asyncio.run(start_reminders_bot())
