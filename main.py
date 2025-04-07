@@ -3,7 +3,7 @@ import nest_asyncio
 import uvicorn
 
 from api.index import app
-from telegram_bot.main import start_assistant_bot
+from assistant_bot.main import start_assistant_bot
 from reminders_bot.main import start_reminders_bot
 
 
