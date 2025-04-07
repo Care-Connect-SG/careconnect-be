@@ -159,7 +159,7 @@ async def delete_activity(
         db = await get_db(request)
         existing = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
         if not existing:
-            raise HTTPException(status_code=404, detail="ActivityResponse not found")
+            raise HTTPException(status_code=404, detail="Activity not found")
 
         user_id = None
         is_admin = False

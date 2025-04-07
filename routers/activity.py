@@ -3,7 +3,11 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request, status
 
-from models.activity import ActivityCreate, ActivityResponse, ActivityUpdate
+from models.activity import (
+    ActivityCreate,
+    ActivityResponse,
+    ActivityUpdate,
+)
 from services import activity_service
 from services.user_service import get_current_user
 from utils.limiter import limiter
@@ -63,7 +67,6 @@ async def update_activity(
     current_user: dict = Depends(get_current_user),
     request: Request = None,
 ):
-
     return await activity_service.update_activity(
         activity_id, activity_update, current_user, request
     )
