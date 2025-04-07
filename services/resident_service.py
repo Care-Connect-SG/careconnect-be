@@ -93,50 +93,55 @@ async def get_resident_by_id(db, resident_id: str) -> RegistrationResponse:
         raise HTTPException(status_code=404, detail="Resident not found")
     return RegistrationResponse(**record)
 
-
-async def update_resident(
-    db, resident_id: str, update_data: RegistrationCreate
-) -> RegistrationResponse:
+async def update_resident(db, resident_id: str, update_data: RegistrationCreate) -> RegistrationResponse:
     if not ObjectId.is_valid(resident_id):
         raise HTTPException(status_code=400, detail="Invalid resident ID")
 
     update_dict = update_data.model_dump(exclude_unset=True)
 
-    if (
-        "date_of_birth" in update_dict
-        and isinstance(update_dict["date_of_birth"], datetime.date)
-        and not isinstance(update_dict["date_of_birth"], datetime.datetime)
-    ):
+    # Fixing datetime.combine usage by referencing datetime.datetime and datetime.time
+    if "date_of_birth" in update_dict and isinstance(update_dict["date_of_birth"], datetime.date):
         update_dict["date_of_birth"] = datetime.datetime.combine(
             update_dict["date_of_birth"], datetime.time.min
         )
 
-    if "additional_notes_timestamp" in update_dict:
-        ts = update_dict.get("additional_notes_timestamp")
-        if isinstance(ts, str):
-            try:
-                update_dict["additional_notes_timestamp"] = (
-                    datetime.datetime.fromisoformat(ts)
-                )
-            except Exception:
-                raise HTTPException(
-                    status_code=400, detail="Invalid additional_notes_timestamp format"
-                )
-        elif isinstance(ts, datetime.date) and not isinstance(ts, datetime.datetime):
-            update_dict["additional_notes_timestamp"] = datetime.datetime.combine(
-                ts, datetime.time.min
-            )
+    resident = await db["resident_info"].find_one({"_id": ObjectId(resident_id)})
+    if not resident:
+        raise HTTPException(status_code=404, detail="Resident not found")
 
-    result = await db["resident_info"].update_one(
-        {"_id": ObjectId(resident_id)}, {"$set": update_dict}
-    )
-    if result.modified_count == 0:
-        resident = await db["resident_info"].find_one({"_id": ObjectId(resident_id)})
-        if not resident:
-            raise HTTPException(status_code=404, detail="Resident not found")
+    # Append to additional_notes
+    if "additional_notes" in update_dict:
+        new_notes = update_dict.pop("additional_notes")
+        if not isinstance(new_notes, list):
+            raise HTTPException(status_code=400, detail="additional_notes must be a list")
+        existing_notes = resident.get("additional_notes", [])
+        update_dict["additional_notes"] = existing_notes + new_notes
+
+    # Append to additional_notes_timestamp
+    if "additional_notes_timestamp" in update_dict:
+        raw_ts = update_dict.pop("additional_notes_timestamp")
+        if not isinstance(raw_ts, list):
+            raise HTTPException(status_code=400, detail="additional_notes_timestamp must be a list")
+        parsed_ts = []
+        for ts in raw_ts:
+            if isinstance(ts, str):
+                try:
+                    parsed_ts.append(datetime.datetime.fromisoformat(ts))
+                except Exception:
+                    raise HTTPException(status_code=400, detail="Invalid timestamp format")
+            elif isinstance(ts, datetime.date) and not isinstance(ts, datetime.datetime):
+                parsed_ts.append(datetime.datetime.combine(ts, datetime.time.min))
+            elif isinstance(ts, datetime.datetime):
+                parsed_ts.append(ts)
+        existing_ts = resident.get("additional_notes_timestamp", [])
+        update_dict["additional_notes_timestamp"] = existing_ts + parsed_ts
+
+    await db["resident_info"].update_one({"_id": ObjectId(resident_id)}, {"$set": update_dict})
+
     updated_record = await db["resident_info"].find_one({"_id": ObjectId(resident_id)})
     if not updated_record:
         raise HTTPException(status_code=404, detail="Resident not found")
+
     return RegistrationResponse(**updated_record)
 
 
