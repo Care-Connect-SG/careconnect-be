@@ -47,13 +47,7 @@ To get started with the CareConnect Backend, follow these steps:
 To start the development server make sure you have python, and run:
 
 ```bash
-uvicorn main:app --reload
-```
-
-To start the development server for Telegram Bot run (no need activate venv):
-
-```bash
-python -m telegram_bot.main
+python main.py
 ```
 
 ## Workflow
@@ -62,7 +56,7 @@ See Jira for list of existing issues and to create branches for them
 
 ## Formatting and Code Style
 
-Whenever you are done coding, make sure to always fix linting errors before doing a pull request. You can either use an eslint extension for your IDE or run `black .` to fix linting errors. If you only wish to check whether your code has any linting errors, run pylint `$(git ls-files '*.py')` instead.
+Whenever you are done coding, make sure to always fix linting errors before doing a pull request. You can either use an eslint extension for your IDE or run `black .` to fix linting errors. If you only wish to check whether your code has any linting errors, run `pylint $(git ls-files '*.py')` instead.
 
 ## Committing Changes
 
