@@ -8,7 +8,7 @@ nest_asyncio.apply()
 
 
 async def run_backend():
-    config = uvicorn.Config(app, host="127.0.0.1", port=8000, reload=True)
+    config = uvicorn.Config(app, host="127.0.0.1", port=8000, reload=False)
     server = uvicorn.Server(config)
     await server.serve()
 

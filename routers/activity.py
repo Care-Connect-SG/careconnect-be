@@ -82,3 +82,12 @@ async def delete_activity(
 ):
     result = await activity_service.delete_activity(activity_id, current_user, request)
     return result
+
+
+@router.patch("/{activity_id}/mark_reminder_sent", response_model=ActivityResponse)
+@limiter.limit("30/minute")
+async def mark_reminder_sent(
+    activity_id: str,
+    request: Request = None,
+):
+    return await activity_service.mark_reminder_sent(activity_id, request)

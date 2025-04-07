@@ -19,6 +19,7 @@ async def create_activity(
         activity_dict["created_by"] = ObjectId(user_id)
         activity_dict["created_at"] = datetime.now(timezone.utc)
         activity_dict["updated_at"] = datetime.now(timezone.utc)
+        activity_dict["reminder_sent"] = False
 
         result = await db[collection_name].insert_one(activity_dict)
         created_activity = await db[collection_name].find_one(
@@ -194,4 +195,25 @@ async def delete_activity(
             raise e
         raise HTTPException(
             status_code=500, detail=f"Failed to delete activity: {str(e)}"
+        )
+
+
+async def mark_reminder_sent(activity_id: str, request: Request) -> ActivityResponse:
+    try:
+        db = await get_db(request)
+        existing = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
+
+        if not existing:
+            raise HTTPException(status_code=404, detail="Activity not found")
+
+        await db[collection_name].update_one(
+            {"_id": ObjectId(activity_id)},
+            {"$set": {"reminder_sent": True, "updated_at": datetime.now(timezone.utc)}},
+        )
+
+        updated = await db[collection_name].find_one({"_id": ObjectId(activity_id)})
+        return ActivityResponse(**updated)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to mark reminder as sent: {str(e)}"
         )
