@@ -44,16 +44,40 @@ To get started with the CareConnect Backend, follow these steps:
 
 ## Usage
 
-To start the development server make sure you have python, and run:
+To start the development server for the **FastAPI app (BE)**, run:
 
 ```bash
-uvicorn main:app --reload
+python main.py
 ```
 
-To start the development server for Telegram Bot run (no need activate venv):
+To start **both the FastAPI app and a telegram bot**,
+
+1. Open the `main.py` file and **uncomment** the bot you want to run inside the `main()` function:
+
+```python
+async def main():
+    await asyncio.gather(
+        run_backend(), 
+        # start_reminders_bot(), # Uncomment this to start Reminders Bot
+        # start_assistant_bot(), # Uncomment this to start Assistant Bot
+    )
+```
+*⚠️ Only one bot can be uncommented at a time to avoid conflicts.*
+
+2. Run `python main.py`
+
+To start the development server for **Assistant Bot (@careconnectsg_bot)** only,
+run (no need activate venv):
 
 ```bash
-python -m telegram_bot.main
+python -m assistant_bot.main
+```
+
+To start the development server for **Reminders Bot (@ccreminders_bot)** only,
+run (no need activate venv):
+
+```bash
+python -m reminders_bot.main
 ```
 
 ## Workflow
