@@ -59,7 +59,6 @@ async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserRespo
             status_code=status.HTTP_409_CONFLICT, detail="Email already exists"
         )
 
-    # Check if telegram_handle is already in use
     if user.telegram_handle:
         existing_telegram_user = await db["users"].find_one(
             {"telegram_handle": user.telegram_handle}
