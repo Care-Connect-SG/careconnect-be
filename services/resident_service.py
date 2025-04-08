@@ -119,8 +119,7 @@ async def update_resident(
             raise HTTPException(
                 status_code=400, detail="additional_notes must be a list"
             )
-        existing_notes = resident.get("additional_notes", [])
-        update_dict["additional_notes"] = existing_notes + new_notes
+        update_dict["additional_notes"] = new_notes
 
     if "additional_notes_timestamp" in update_dict:
         raw_ts = update_dict.pop("additional_notes_timestamp")
@@ -143,8 +142,7 @@ async def update_resident(
                 parsed_ts.append(datetime.datetime.combine(ts, datetime.time.min))
             elif isinstance(ts, datetime.datetime):
                 parsed_ts.append(ts)
-        existing_ts = resident.get("additional_notes_timestamp", [])
-        update_dict["additional_notes_timestamp"] = existing_ts + parsed_ts
+        update_dict["additional_notes_timestamp"] = parsed_ts
 
     await db["resident_info"].update_one(
         {"_id": ObjectId(resident_id)}, {"$set": update_dict}
@@ -155,7 +153,6 @@ async def update_resident(
         raise HTTPException(status_code=404, detail="Resident not found")
 
     return RegistrationResponse(**updated_record)
-
 
 async def delete_resident(db, resident_id: str) -> dict:
     if not ObjectId.is_valid(resident_id):
