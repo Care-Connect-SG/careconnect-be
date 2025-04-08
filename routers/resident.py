@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, Request
 
 from db.connection import get_resident_db
-from models.resident import RegistrationCreate, RegistrationResponse
+from models.resident import RegistrationCreate, RegistrationResponse, RegistrationUpdate
 from services.resident_service import (
     create_residentInfo,
     delete_resident,
@@ -83,7 +83,7 @@ async def view_resident_by_id(
 async def update_resident_record(
     request: Request,
     resident_id: str,
-    update_data: RegistrationCreate,
+    update_data: RegistrationUpdate,
     db=Depends(get_resident_db),
     current_user: Dict = Depends(require_roles(["Admin"])),
 ):
