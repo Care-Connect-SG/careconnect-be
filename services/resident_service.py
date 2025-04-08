@@ -154,6 +154,7 @@ async def update_resident(
 
     return RegistrationResponse(**updated_record)
 
+
 async def delete_resident(db, resident_id: str) -> dict:
     if not ObjectId.is_valid(resident_id):
         raise HTTPException(status_code=400, detail="Invalid resident ID")
