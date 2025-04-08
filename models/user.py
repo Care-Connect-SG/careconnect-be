@@ -26,6 +26,7 @@ class UserCreate(BaseModel):
     organisation_rank: Optional[str] = None
     gender: Gender
     profile_picture: Optional[str] = None
+    telegram_handle: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -35,6 +36,7 @@ class UserUpdate(BaseModel):
     organisation_rank: Optional[str] = None
     profile_picture: Optional[str] = None
     gender: Optional[Gender] = None
+    telegram_handle: Optional[str] = None
 
 
 class UserPasswordUpdate(BaseModel):
@@ -51,6 +53,7 @@ class UserResponse(ModelConfig):
     organisation_rank: Optional[str] = None
     profile_picture: Optional[str] = None
     gender: Gender
+    telegram_handle: Optional[str] = None
 
 
 class UserTagResponse(ModelConfig):
