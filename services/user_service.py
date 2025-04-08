@@ -61,11 +61,13 @@ async def register_user(db: AsyncIOMotorDatabase, user: UserCreate) -> UserRespo
 
     # Check if telegram_handle is already in use
     if user.telegram_handle:
-        existing_telegram_user = await db["users"].find_one({"telegram_handle": user.telegram_handle})
+        existing_telegram_user = await db["users"].find_one(
+            {"telegram_handle": user.telegram_handle}
+        )
         if existing_telegram_user:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, 
-                detail="Telegram handle already in use"
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Telegram handle already in use",
             )
 
     hashed_pass = Hash.bcrypt(user.password)
@@ -130,16 +132,17 @@ async def update_user(
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if new telegram_handle is already in use by another user
     if "telegram_handle" in user_data and user_data["telegram_handle"]:
-        existing_telegram_user = await db["users"].find_one({
-            "telegram_handle": user_data["telegram_handle"],
-            "_id": {"$ne": ObjectId(user_id)}  # Exclude current user
-        })
+        existing_telegram_user = await db["users"].find_one(
+            {
+                "telegram_handle": user_data["telegram_handle"],
+                "_id": {"$ne": ObjectId(user_id)},
+            }
+        )
         if existing_telegram_user:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, 
-                detail="Telegram handle already in use"
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Telegram handle already in use",
             )
 
     if "password" in user_data:
