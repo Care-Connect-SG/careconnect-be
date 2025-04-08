@@ -37,6 +37,7 @@ class RegistrationResponse(ModelConfig):
     additional_notes_timestamp: Optional[List[datetime]] = None
     primary_nurse: Optional[str] = None
 
+
 class RegistrationUpdate(ModelConfig):
     photograph: Optional[str] = None
     full_name: Optional[str] = None

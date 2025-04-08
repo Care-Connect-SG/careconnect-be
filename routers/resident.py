@@ -77,19 +77,18 @@ async def view_resident_by_id(
 
 
 @router.put(
-    "/{resident_id}",
-    response_model=RegistrationResponse,
-    response_model_by_alias=False
+    "/{resident_id}", response_model=RegistrationResponse, response_model_by_alias=False
 )
 @limiter.limit("10/minute")
 async def update_resident_record(
     request: Request,
     resident_id: str,
-    update_data: RegistrationUpdate,  # <-- use the new one
+    update_data: RegistrationUpdate,
     db=Depends(get_resident_db),
     current_user: Dict = Depends(require_roles(["Admin"])),
 ):
     return await update_resident(db, resident_id, update_data)
+
 
 @router.delete("/{resident_id}")
 @limiter.limit("10/minute")
