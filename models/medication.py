@@ -6,15 +6,18 @@ from pydantic import BaseModel, Field
 
 from models.base import ModelConfig, PyObjectId
 
+
 class ScheduleType(str, Enum):
     DAY = "day"
     WEEK = "week"
     CUSTOM = "custom"
 
+
 class TimeOfDay(BaseModel):
     hour: int
     minute: int
-    
+
+
 class MedicationCreate(BaseModel):
     medication_name: str
     dosage: str
@@ -25,6 +28,7 @@ class MedicationCreate(BaseModel):
     times_of_day: List[TimeOfDay] = Field(default_factory=list)
     days_of_week: List[str] = Field(default_factory=list)
     instructions: Optional[str] = None
+
 
 class MedicationResponse(ModelConfig):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
