@@ -41,6 +41,7 @@ async def get_activities(
     search: Optional[str] = None,
     sort_by: str = "start_time",
     sort_order: str = "asc",
+    created_by: Optional[str] = None,
 ) -> List[ActivityResponse]:
     try:
         db = await get_db(request)
@@ -60,6 +61,8 @@ async def get_activities(
                 {"title": {"$regex": search, "$options": "i"}},
                 {"description": {"$regex": search, "$options": "i"}},
             ]
+        if created_by:
+            query["created_by"] = ObjectId(created_by)
 
         sort_direction = 1 if sort_order == "asc" else -1
         cursor = db[collection_name].find(query).sort(sort_by, sort_direction)
@@ -130,6 +133,7 @@ async def update_activity(
 
         update_data = activity_update.model_dump(exclude_unset=True)
         update_data["updated_at"] = datetime.now(timezone.utc)
+        update_data["reminder_sent"] = False
 
         result = await db[collection_name].update_one(
             {"_id": ObjectId(activity_id)}, {"$set": update_data}

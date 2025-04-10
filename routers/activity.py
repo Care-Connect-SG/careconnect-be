@@ -26,7 +26,6 @@ async def create_activity(
 
 
 @router.get("/", response_model=List[ActivityResponse], response_model_by_alias=False)
-@limiter.limit("100/minute")
 async def list_activities(
     request: Request,
     start_date: Optional[datetime] = None,
@@ -36,6 +35,7 @@ async def list_activities(
     search: Optional[str] = None,
     sort_by: str = Query("start_time", regex="^(start_time|title|category)$"),
     sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    created_by: Optional[str] = None,
 ):
     activities = await activity_service.get_activities(
         request=request,
@@ -46,6 +46,7 @@ async def list_activities(
         search=search,
         sort_by=sort_by,
         sort_order=sort_order,
+        created_by=created_by,
     )
     return activities
 
