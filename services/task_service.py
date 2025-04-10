@@ -43,6 +43,7 @@ async def create_task(
         task_doc["created_by"] = ObjectId(current_user["id"])
         task_doc["created_at"] = datetime.now(timezone.utc)
         task_doc["assigned_to"] = ObjectId(task_data.assigned_to)
+        task_doc["reminder_sent"] = False
         result = await db.tasks.insert_one(task_doc)
         new_task = await db.tasks.find_one({"_id": result.inserted_id})
         tasks_created.append(TaskResponse(**new_task))
@@ -249,6 +250,19 @@ async def update_task(
 
     update_data = updated_task.model_dump(by_alias=True, exclude_none=True)
 
+    id_fields = [
+        "assigned_to",
+        "resident",
+        "created_by",
+        "reassignment_requested_to",
+        "reassignment_requested_by",
+    ]
+
+    for field in id_fields:
+        if field in update_data and update_data[field] is not None:
+            if isinstance(update_data[field], str):
+                update_data[field] = ObjectId(update_data[field])
+
     if update_data.get("update_series"):
         update_data.pop("update_series")
         series_id = existing_task.get("series_id")
@@ -266,6 +280,11 @@ async def update_task(
                     date_fields[field] = value
                 else:
                     non_date_fields[field] = value
+
+            for field in id_fields:
+                if field in non_date_fields and non_date_fields[field] is not None:
+                    if isinstance(non_date_fields[field], str):
+                        non_date_fields[field] = ObjectId(non_date_fields[field])
 
             if "start_date" in date_fields:
                 date_fields["start_date"] = date_fields["start_date"].replace(
@@ -1037,3 +1056,72 @@ async def update_task_status(db: AsyncIOMotorDatabase, task: dict) -> dict:
         task["status"] = status_update
 
     return task
+
+
+async def get_tasks_for_bot(
+    db: AsyncIOMotorDatabase,
+    assigned_to: str,
+    start_date: str,
+    end_date: str = None,
+) -> List[dict]:
+    filters = {}
+
+    if assigned_to:
+        try:
+            filters["assigned_to"] = ObjectId(assigned_to)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid assigned_to ID.")
+
+    # Process start date
+    try:
+        start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
+        start_of_period = datetime.combine(
+            start_date_obj, datetime.min.time(), tzinfo=timezone.utc
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD."
+        )
+
+    # Process end date if provided, otherwise use start date
+    if end_date:
+        try:
+            end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
+            end_of_period = datetime.combine(
+                end_date_obj, datetime.max.time(), tzinfo=timezone.utc
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD."
+            )
+    else:
+        # If no end date is provided, use the start date as the end date
+        end_of_period = datetime.combine(
+            start_date_obj, datetime.max.time(), tzinfo=timezone.utc
+        )
+
+    # Use a date range for the query
+    filters["start_date"] = {"$gte": start_of_period, "$lte": end_of_period}
+
+    # Find all tasks matching the filters
+    tasks = await db.tasks.find(filters).to_list(length=None)
+
+    enriched_tasks = []
+    for task in tasks:
+        task = await enrich_task_with_names(db, task)
+        task = await enrich_task_with_room(db, task)
+        enriched_tasks.append(task)
+
+    return enriched_tasks
+
+
+async def mark_reminder_sent(db: AsyncIOMotorDatabase, task_id: str) -> TaskResponse:
+    """Mark a task's reminder as sent"""
+    result = await db.tasks.update_one(
+        {"_id": ObjectId(task_id)}, {"$set": {"reminder_sent": True}}
+    )
+    if result.modified_count:
+        updated_task_doc = await db.tasks.find_one({"_id": ObjectId(task_id)})
+        updated_task_doc = await enrich_task_with_names(db, updated_task_doc)
+        return TaskResponse(**updated_task_doc)
+    raise HTTPException(status_code=404, detail="Task not found")

@@ -25,6 +25,8 @@ from services.task_service import (
     reopen_task,
     request_task_reassignment,
     update_task,
+    mark_reminder_sent,
+    get_tasks_for_bot,
 )
 from services.user_service import get_current_user, require_roles
 from utils.limiter import limiter
@@ -88,6 +90,22 @@ async def fetch_tasks(
     )
 
     return tasks
+
+
+@router.get(
+    "/telegram",
+    summary="Fetch all tasks for bot",
+    response_model=List[TaskResponse],
+    response_model_by_alias=False,
+)
+async def get_tasks_for_bot_route(
+    request: Request,
+    start_date: str = None,
+    end_date: str = None,
+    assigned_to: str = None,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    return await get_tasks_for_bot(db, assigned_to, start_date, end_date)
 
 
 @router.get(
@@ -337,3 +355,19 @@ async def download_tasks_route(
             "Content-Disposition": f"attachment; filename=tasks-{datetime.now().strftime('%Y%m%d')}.pdf"
         },
     )
+
+
+@router.patch(
+    "/{task_id}/mark_reminder_sent",
+    summary="Mark a task reminder as sent",
+    response_model=TaskResponse,
+    response_model_by_alias=False,
+)
+@limiter.limit("100/minute")
+async def mark_reminder_sent_route(
+    request: Request,
+    task_id: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    updated_task = await mark_reminder_sent(db, task_id)
+    return updated_task
