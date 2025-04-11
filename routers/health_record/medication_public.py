@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
+from fastapi import APIRouter, Depends, HTTPException
 
 from db.connection import get_resident_db
 from models.medication import MedicationResponse

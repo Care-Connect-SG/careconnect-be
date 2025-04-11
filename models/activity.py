@@ -15,16 +15,25 @@ class ActivityBase(BaseModel):
     category: Optional[str] = None
     tags: Optional[str] = None
     visibility: bool = True
+    reminder_minutes: Optional[int] = None
+    reminder_sent: bool = False
 
 
 class ActivityCreate(ActivityBase):
     pass
 
 
-class ActivityUpdate(ActivityBase):
+class ActivityUpdate(BaseModel):
     title: Optional[str] = None
+    description: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    location: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[str] = None
+    visibility: Optional[bool] = None
+    reminder_minutes: Optional[int] = None
+    reminder_sent: Optional[bool] = None
 
 
 class ActivityResponse(ActivityBase, ModelConfig):
@@ -32,11 +41,3 @@ class ActivityResponse(ActivityBase, ModelConfig):
     created_by: Optional[PyObjectId] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
-class ActivityFilter(BaseModel):
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    category: Optional[str] = None
-    tags: Optional[str] = None
-    search: Optional[str] = None

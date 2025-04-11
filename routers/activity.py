@@ -3,7 +3,11 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query, Request, status
 
-from models.activity import ActivityCreate, ActivityResponse, ActivityUpdate
+from models.activity import (
+    ActivityCreate,
+    ActivityResponse,
+    ActivityUpdate,
+)
 from services import activity_service
 from services.user_service import get_current_user
 from utils.limiter import limiter
@@ -22,7 +26,6 @@ async def create_activity(
 
 
 @router.get("/", response_model=List[ActivityResponse], response_model_by_alias=False)
-@limiter.limit("100/minute")
 async def list_activities(
     request: Request,
     start_date: Optional[datetime] = None,
@@ -32,8 +35,9 @@ async def list_activities(
     search: Optional[str] = None,
     sort_by: str = Query("start_time", regex="^(start_time|title|category)$"),
     sort_order: str = Query("asc", regex="^(asc|desc)$"),
+    created_by: Optional[str] = None,
 ):
-    return await activity_service.get_activities(
+    activities = await activity_service.get_activities(
         request=request,
         start_date=start_date,
         end_date=end_date,
@@ -42,7 +46,9 @@ async def list_activities(
         search=search,
         sort_by=sort_by,
         sort_order=sort_order,
+        created_by=created_by,
     )
+    return activities
 
 
 @router.get(
@@ -63,7 +69,6 @@ async def update_activity(
     current_user: dict = Depends(get_current_user),
     request: Request = None,
 ):
-
     return await activity_service.update_activity(
         activity_id, activity_update, current_user, request
     )
@@ -76,6 +81,14 @@ async def delete_activity(
     current_user: dict = Depends(get_current_user),
     request: Request = None,
 ):
-    return await activity_service.delete_activity(
-        activity_id, current_user["id"], request
-    )
+    result = await activity_service.delete_activity(activity_id, current_user, request)
+    return result
+
+
+@router.patch("/{activity_id}/mark_reminder_sent", response_model=ActivityResponse)
+@limiter.limit("30/minute")
+async def mark_reminder_sent(
+    activity_id: str,
+    request: Request = None,
+):
+    return await activity_service.mark_reminder_sent(activity_id, request)
