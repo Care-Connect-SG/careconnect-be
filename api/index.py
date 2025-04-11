@@ -17,6 +17,7 @@ from routers.health_record.medication_public import router as medication_public_
 from routers.incident.form import router as form_router
 from routers.incident.report import router as report_router
 from routers.resident import router as resident_router
+from routers.sensor import sensor_router
 from routers.tag import router as tag_router
 from routers.task import router as task_router
 from routers.user import router as user_router
@@ -49,6 +50,7 @@ app.include_router(fixed_medication_router)
 app.include_router(wellness_report_router)
 app.include_router(medication_log_router)
 app.include_router(medication_public_router)
+app.include_router(sensor_router)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -57,3 +59,4 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.get("/")
 def read_root():
     return {"status": "Server is healthy"}
+
