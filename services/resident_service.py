@@ -68,9 +68,14 @@ async def get_residents_with_pagination(
     return residents
 
 
-async def get_all_residents(db) -> List[RegistrationResponse]:
+async def get_all_residents(db, caregiver_name: Optional[str] = None) -> List[RegistrationResponse]:
     residents = []
-    cursor = db["resident_info"].find()
+    if caregiver_name:
+        cursor = db["resident_info"].find(
+            {"primary_nurse": {"$regex": caregiver_name, "$options": "i"}}
+        )
+    else:
+        cursor = db["resident_info"].find()
     async for record in cursor:
         residents.append(RegistrationResponse(**record))
     return residents
