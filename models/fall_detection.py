@@ -5,9 +5,10 @@ from pydantic import BaseModel, Field
 
 from models.base import ModelConfig, PyObjectId
 
+
 class FallLogCreate(BaseModel):
     resident_id: str = "67bd9832c775476225864ac7"  # Mock as Jane for now
-    device_id: str = "mock_wearable_12345" # Mock wearable device for now
+    device_id: str = "mock_wearable_12345"  # Mock wearable device for now
     acceleration_magnitude: float
     gyro_rotation: dict  # {'x': float, 'y': float, 'z': float}
     status: Literal["pending", "confirmed", "false_positive"] = "pending"

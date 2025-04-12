@@ -8,10 +8,11 @@ from datetime import datetime
 sensor_router = APIRouter()
 
 FALL_ACCEL_THRESHOLD = 2.5  # g
-FALL_GYRO_THRESHOLD = 2.0   # rad/s
+FALL_GYRO_THRESHOLD = 2.0  # rad/s
 
 RESIDENT_ID = "67bd9832c775476225864ac7"
 DEVICE_ID = "mock_wearable_12345"
+
 
 @sensor_router.post("/sensor-data")
 async def receive_sensor_data(request: Request, db=Depends(get_resident_db)):
@@ -42,7 +43,7 @@ async def receive_sensor_data(request: Request, db=Depends(get_resident_db)):
                 acceleration_magnitude=accel_mag,
                 gyro_rotation={"x": gx, "y": gy, "z": gz},
                 status="pending",
-                incident_report_id=None
+                incident_report_id=None,
             )
 
             await create_fall_log(db, fall_log)

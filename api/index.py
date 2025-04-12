@@ -61,4 +61,3 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.get("/")
 def read_root():
     return {"status": "Server is healthy"}
-
