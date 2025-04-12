@@ -39,7 +39,7 @@ async def get_all_falls(
 async def update_fall_status(
     request: Request,
     log_id: str,
-    status: str,  # e.g. "confirmed" or "false_positive"
+    status: str,
     db=Depends(get_resident_db),
 ):
     return await update_fall_log_status(db, log_id, status)
