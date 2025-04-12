@@ -1072,7 +1072,6 @@ async def get_tasks_for_bot(
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid assigned_to ID.")
 
-    # Process start date
     try:
         start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").date()
         start_of_period = datetime.combine(
@@ -1083,7 +1082,6 @@ async def get_tasks_for_bot(
             status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD."
         )
 
-    # Process end date if provided, otherwise use start date
     if end_date:
         try:
             end_date_obj = datetime.strptime(end_date, "%Y-%m-%d").date()
@@ -1095,15 +1093,12 @@ async def get_tasks_for_bot(
                 status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD."
             )
     else:
-        # If no end date is provided, use the start date as the end date
         end_of_period = datetime.combine(
             start_date_obj, datetime.max.time(), tzinfo=timezone.utc
         )
 
-    # Use a date range for the query
     filters["start_date"] = {"$gte": start_of_period, "$lte": end_of_period}
 
-    # Find all tasks matching the filters
     tasks = await db.tasks.find(filters).to_list(length=None)
 
     enriched_tasks = []
