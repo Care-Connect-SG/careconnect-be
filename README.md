@@ -49,7 +49,7 @@ To start the development server make sure you have python, and run:
 ```bash
 python main.py
 # for development
-uvicor main:app --reload
+uvicorn main:app --reload
 ```
 
 ## Workflow

@@ -36,8 +36,9 @@ async def create_resident_record(
 async def list_all_residents(
     request: Request,
     db=Depends(get_resident_db),
+    caregiver_name: Optional[str] = None,
 ):
-    return await get_all_residents(db)
+    return await get_all_residents(db, caregiver_name)
 
 
 @router.get(
