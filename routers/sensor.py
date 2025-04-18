@@ -15,6 +15,7 @@ FALL_COOLDOWN_SECONDS = 10  # Prevent duplicate logs
 last_accel_spike = None
 last_fall_logged_time = None
 
+
 @sensor_router.post("/sensor-data")
 async def receive_sensor_data(request: Request, db=Depends(get_resident_db)):
     global last_accel_spike, last_fall_logged_time
@@ -33,7 +34,11 @@ async def receive_sensor_data(request: Request, db=Depends(get_resident_db)):
         # Step 1: Detect sudden spike in acceleration
         if accel_mag > FALL_ACCEL_THRESHOLD:
             # If we already detected a fall recently, skip this
-            if last_fall_logged_time and (now - last_fall_logged_time).total_seconds() < FALL_COOLDOWN_SECONDS:
+            if (
+                last_fall_logged_time
+                and (now - last_fall_logged_time).total_seconds()
+                < FALL_COOLDOWN_SECONDS
+            ):
                 print("⚠️ Fall already logged recently — skipping")
                 return {"status": "cooldown"}
 
@@ -60,7 +65,7 @@ async def receive_sensor_data(request: Request, db=Depends(get_resident_db)):
                     incident_report_id=None,
                 )
                 await create_fall_log(db, fall_log)
-                
+
                 last_fall_logged_time = now  # 🧠 Update cooldown timer
                 last_accel_spike = None
 
