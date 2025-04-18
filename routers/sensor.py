@@ -3,50 +3,66 @@ from db.connection import get_resident_db
 from services.fall_detection_service import create_fall_log
 from models.fall_detection import FallLogCreate
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 
 sensor_router = APIRouter()
 
-FALL_ACCEL_THRESHOLD = 2.5  # g
-FALL_GYRO_THRESHOLD = 2.0  # rad/s
+FALL_ACCEL_THRESHOLD = 4.0  # g
+POST_FALL_INACTIVITY_WINDOW = 2  # seconds
+POST_FALL_ACCEL_THRESHOLD = 0.5  # g
+FALL_COOLDOWN_SECONDS = 10  # Prevent duplicate logs
 
-RESIDENT_ID = "67bd9832c775476225864ac7"
-DEVICE_ID = "mock_wearable_12345"
-
+last_accel_spike = None
+last_fall_logged_time = None
 
 @sensor_router.post("/sensor-data")
 async def receive_sensor_data(request: Request, db=Depends(get_resident_db)):
-    data = await request.json()
+    global last_accel_spike, last_fall_logged_time
 
+    data = await request.json()
     try:
-        # Acceleration
         ax = float(data.get("accelerometerAccelerationX", 0))
         ay = float(data.get("accelerometerAccelerationY", 0))
         az = float(data.get("accelerometerAccelerationZ", 0))
         accel_mag = math.sqrt(ax**2 + ay**2 + az**2)
 
-        # Gyroscope
-        gx = float(data.get("gyroRotationX", 0))
-        gy = float(data.get("gyroRotationY", 0))
-        gz = float(data.get("gyroRotationZ", 0))
-        gyro_mag = math.sqrt(gx**2 + gy**2 + gz**2)
+        print(f"📡 Accel: {accel_mag:.3f}g")
 
-        print(f"📡 Accel: {accel_mag:.3f}g | Gyro: {gyro_mag:.3f}rad/s")
+        now = datetime.utcnow()
 
-        # Detect fall directly
-        if accel_mag > FALL_ACCEL_THRESHOLD and gyro_mag > FALL_GYRO_THRESHOLD:
-            print("🚨 FALL DETECTED — Logging to DB!")
+        # Step 1: Detect sudden spike in acceleration
+        if accel_mag > FALL_ACCEL_THRESHOLD:
+            # If we already detected a fall recently, skip this
+            if last_fall_logged_time and (now - last_fall_logged_time).total_seconds() < FALL_COOLDOWN_SECONDS:
+                print("⚠️ Fall already logged recently — skipping")
+                return {"status": "cooldown"}
 
-            fall_log = FallLogCreate(
-                resident_id=RESIDENT_ID,
-                device_id=DEVICE_ID,
-                acceleration_magnitude=accel_mag,
-                gyro_rotation={"x": gx, "y": gy, "z": gz},
-                status="pending",
-                incident_report_id=None,
-            )
+            last_accel_spike = {
+                "timestamp": now,
+            }
+            print("💥 Impact detected — waiting to confirm fall...")
+            print("💥💥💥💥💥💥💥💥💥💥")
 
-            await create_fall_log(db, fall_log)
+        # Step 2: Post-impact confirmation based on inactivity
+        if last_accel_spike:
+            time_since_spike = (now - last_accel_spike["timestamp"]).total_seconds()
+
+            if 0 < time_since_spike <= POST_FALL_INACTIVITY_WINDOW:
+                if accel_mag < POST_FALL_ACCEL_THRESHOLD:
+                    print(f"🤔 Low movement post-impact ({accel_mag:.2f}g)")
+            elif time_since_spike > POST_FALL_INACTIVITY_WINDOW:
+                print("🚨 FALL CONFIRMED — Logging to DB!")
+                fall_log = FallLogCreate(
+                    resident_id="68015e726aafe2290598b8a4",
+                    device_id="mock_wearable_12345",
+                    acceleration_magnitude=accel_mag,
+                    status="pending",
+                    incident_report_id=None,
+                )
+                await create_fall_log(db, fall_log)
+                
+                last_fall_logged_time = now  # 🧠 Update cooldown timer
+                last_accel_spike = None
 
         return {"status": "ok"}
 
