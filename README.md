@@ -1,6 +1,7 @@
 # CareConnect Backend
 
 Welcome to the CareConnect Backend repository. This project is the backend service for the CareConnect application, which aims to connect patients with healthcare providers seamlessly.
+The backend of CareConnect is not live yet because we need to self-host a DNS to enable a stateful backend, this avoids relying on a stateless connection that would require reconnecting to the database with every request.
 
 ## Installation
 
